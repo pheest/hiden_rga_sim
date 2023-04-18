@@ -32,6 +32,7 @@ class HidenRGAStreamInterface(StreamInterface):
     
     commands = {
         CmdBuilder("get_name").escape("pget name").eos().build(),
+        CmdBuilder("get_name").escape("pget ID").eos().build(),
         CmdBuilder("reset").escape("sdel all").build(),
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
@@ -72,7 +73,11 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("tdel_all").escape("tdel all").build(),
         CmdBuilder("quit").escape("quit").build(),
         CmdBuilder("l999_scan").escape("l999 scan").build(),
-        
+        CmdBuilder("lmin_mass").escape("lmin mass").build(),
+        CmdBuilder("lmax_mass").escape("lmax mass").build(),
+        CmdBuilder("lres_mass").escape("lres mass").build(),
+        CmdBuilder("lid_multiplier").escape("lid# multiplier").build(),
+        CmdBuilder("rerr").escape("rerr").build(),
     }
 
     in_terminator = "\r"
@@ -302,6 +307,21 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def tdel_all(self):
         return "" # OK
+
+    def lmin_mass(self):
+        return self.device.min_mass
+    
+    def lmax_mass(self):
+        return self.device.max_mass
+    
+    def lres_mass(self):
+        return 0.001
+    
+    def lid_multiplier(self):
+        return "1"
+    
+    def rerr(self):
+        return ""  # OK
     
     @has_log
     def handle_error(self, request, error):
