@@ -51,6 +51,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("pset_points").escape("pset points ").int().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
         CmdBuilder("sset_Ascans").escape("sset scan Ascans").build(),
+        CmdBuilder("lini_Ascans").escape("lini Ascans").build(),
         CmdBuilder("sset_row").escape("sset row ").int().build(),
         CmdBuilder("sset_output").escape("sset output ").string().build(),
         CmdBuilder("sset_start").escape("sset start ").float().build(),
@@ -141,6 +142,10 @@ class HidenRGAStreamInterface(StreamInterface):
             self.device.start()
         return "task 1, job 1," # Task <task#>, job <job#>,
         
+        
+    def lini_Ascans(self):
+        return ""  # OK
+    
     @conditional_reply("connected")
     def sjob_lput(self, job):
         return "task 1, job 1," # Task <task#>, job <job#>,
