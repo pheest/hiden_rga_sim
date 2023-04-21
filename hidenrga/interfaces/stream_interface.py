@@ -41,7 +41,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sjob_lset").escape("sjob lset").string().build(),
         CmdBuilder("sjob_quit").escape("sjob quit").build(),
         CmdBuilder("sjob_lini").escape("sjob lini ").string().build(),
-        CmdBuilder("sjob_lput").escape("sjob lput ").string().build(),
+        CmdBuilder("sjob_lput").escape("sjob lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
         CmdBuilder("stat_job").escape("stat ").int().build(),
         CmdBuilder("lget_device").escape("lget ").string().build(),
@@ -71,8 +71,11 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_settle").escape("sset settle ").string().build(),
         CmdBuilder("sjob_sset_mode").escape("sjob sset mode ").int().build(),
         CmdBuilder("sset_mode").escape("sset mode ").int().build(),
+        CmdBuilder("sset_mode").escape("lset mode ").int().build(),
         CmdBuilder("tdel_all").escape("tdel all").build(),
         CmdBuilder("quit").escape("quit").build(),
+        CmdBuilder("sset_state_Abort").escape("sset state Abort:").build(),
+        CmdBuilder("sval").escape("sval").build(),
         CmdBuilder("l999_scan").escape("l999 scan").build(),
         CmdBuilder("lmin_mass").escape("lmin mass").build(),
         CmdBuilder("lmax_mass").escape("lmax mass").build(),
@@ -147,7 +150,26 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
     
     @conditional_reply("connected")
-    def sjob_lput(self, job):
+    def sjob_lput(self, device, val0, val1):
+        #if device == "cage":
+            #self.device.cage = val1
+        #if device == "delta-m":
+            #self.device.delta-m = val1
+        if device == "electron-energy":
+            self.device.electron_energy = val1
+        if device == "emission":
+            self.device.emission = val1
+        #if device = "focus":
+            #self.device.focus = val1
+        #if device = "mass":
+            #self.device.mass = val1
+        #if device = "mode-change-delay":
+            #self.device.mode-change-delay = val1
+        #if device = "multiplier":
+            #self.device.multiplier = val1
+        #if device = "resolution":
+            #self.device.resolution = val1
+       
         return "task 1, job 1," # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
@@ -303,6 +325,17 @@ class HidenRGAStreamInterface(StreamInterface):
 
     @conditional_reply("connected")
     def quit(self):
+        return "" # OK
+        
+        
+    @conditional_reply("connected")
+    def sset_state_Abort(self):
+        if self.device.stat:
+            self.device.stop()
+        return "" # OK
+
+    @conditional_reply("connected")
+    def sval(self):
         return "" # OK
     
     @conditional_reply("connected")
