@@ -50,8 +50,8 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("data").escape("data").build(),
         CmdBuilder("pset_points").escape("pset points ").int().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
-        CmdBuilder("sset_Ascans").escape("sset scan Ascans").build(),
-        CmdBuilder("lini_Ascans").escape("lini Ascans").build(),
+        CmdBuilder("sset_scan").escape("sset scan ").string().build(),
+        CmdBuilder("lini_scan").escape("lini ").string().build(),
         CmdBuilder("sset_row").escape("sset row ").int().build(),
         CmdBuilder("sset_output").escape("sset output ").string().build(),
         CmdBuilder("sset_start").escape("sset start ").float().build(),
@@ -66,7 +66,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_current").escape("sset current ").int().build(),
         CmdBuilder("sset_zero").escape("sset zero ").int().build(),
         CmdBuilder("sset_options").escape("sset options ").string().build(),
-        CmdBuilder("sset_report").escape("sset report ").string().build(),
+        CmdBuilder("sset_report").escape("sset report ").int().build(),
         CmdBuilder("sset_dwell").escape("sset dwell ").string().build(),
         CmdBuilder("sset_settle").escape("sset settle ").string().build(),
         CmdBuilder("sjob_sset_mode").escape("sjob sset mode ").int().build(),
@@ -140,13 +140,13 @@ class HidenRGAStreamInterface(StreamInterface):
     def sjob_lini(self, job):
         return "task 1, job 1," # Task <task#>, job <job#>,
         
-    def sjob_lget(self, job):
-        if job == "Ascans":
+    def sjob_lget(self, scan):
+        if scan == "Ascans":
             self.device.start()
         return "task 1, job 1," # Task <task#>, job <job#>,
         
         
-    def lini_Ascans(self):
+    def lini_scan(self, scan):
         return ""  # OK
     
     @conditional_reply("connected")
@@ -192,7 +192,8 @@ class HidenRGAStreamInterface(StreamInterface):
         return retval             # ( terse = 1 ) <READING>
         
     @conditional_reply("connected")
-    def sset_Ascans(self):
+    def sset_scan(self, scan):
+        self._device.current_scan = scan
         return "" # OK
         
     @conditional_reply("connected")
