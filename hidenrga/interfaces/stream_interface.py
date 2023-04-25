@@ -17,13 +17,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 # *********************************************************************
 
-from collections import OrderedDict
-
 from lewis.adapters.stream import Cmd, StreamInterface
-from lewis.core import approaches
 from lewis.utils.command_builder import CmdBuilder
 from lewis.utils.replies import conditional_reply
 from lewis.core.logging import has_log
+
 
 class HidenRGAStreamInterface(StreamInterface):
     """
@@ -101,21 +99,21 @@ class HidenRGAStreamInterface(StreamInterface):
         Sets the device terse mode.
         """
         self.device.terse = bool(terse)
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def set_out(self, out):
         """
         Sets the device stdout stream.
         """
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def set_err(self, err):
         """
         Sets the device stderr stream.
         """
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sjob_sdel_all(self):
@@ -144,8 +142,7 @@ class HidenRGAStreamInterface(StreamInterface):
         if scan == "Ascans":
             self.device.start()
         return "task 1, job 1," # Task <task#>, job <job#>,
-        
-        
+
     def lini_scan(self, scan):
         return ""  # OK
     
@@ -170,7 +167,7 @@ class HidenRGAStreamInterface(StreamInterface):
         #if device = "resolution":
             #self.device.resolution = val1
        
-        return "task 1, job 1," # Task <task#>, job <job#>,
+        return "task 1, job 1,"  # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
     def stat_job(self, job):
@@ -185,92 +182,97 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def lget_device(self, devID):
         retval = "0"
-        if devID=='emok' and self.device.emok: retval = "1"
-        if devID=='filok' and self.device.filok: retval = "1"
-        if devID=='ptrip' and self.device.ptrip: retval = "1"
-        if devID=='overtemp' and self.device.overtemp: retval = "1"
+        if devID == 'emok' and self.device.emok:
+            retval = "1"
+        if devID == 'filok' and self.device.filok:
+            retval = "1"
+        if devID == 'ptrip' and self.device.ptrip:
+            retval = "1"
+        if devID == 'overtemp' and self.device.overtemp:
+            retval = "1"
         return retval             # ( terse = 1 ) <READING>
         
     @conditional_reply("connected")
     def sset_scan(self, scan):
         self._device.current_scan = scan
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_row(self, row):
-        self.device.row = row
-        return "" # OK
+        # NB, Hiden indexes rows starting at 1. I prefer to index from 0.
+        self.device.current_row = row-1
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_output(self, output):
-        self.device.output = output
-        return "" # OK
+        self.device.scan_output = output
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_start(self, start):
         self.device.scan_start = start
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_stop(self, stop):
         self.device.scan_stop = stop
-        return "" # OK
+        return ""  # OK
                 
     @conditional_reply("connected")
     def sset_step(self, step):
         self.device.scan_step = step
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_cycles(self, cycles):
         self.device.cycles = cycles
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def pset_cycles(self, cycles):
         # This parameter is now obsolete. PSET cycles n is equivalent to SSET cycles n for Ascans.
         self.device.cycles = cycles
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_interval(self, interval):
         self.device.interval = interval
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_input(self, input):
-        self.device.input = input
-        return "" # OK
+        self.device.scan_input = input
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_low(self, low):
         self.device.low = low
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_high(self, high):
         self.device.high = high
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_current(self, current):
         self.device.current = current
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_zero(self, zero):
         self.device.zero = bool(zero)
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sset_options(self, options):
         self.device.options = options
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def sset_report(self, report):
         self.device.report = report
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def sset_dwell(self, dwell):
@@ -281,7 +283,7 @@ class HidenRGAStreamInterface(StreamInterface):
         else:
             self.device.dwell = int(dwell)
         self.device.dwellmode = dwellmode
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def sset_settle(self, settle):
@@ -292,12 +294,12 @@ class HidenRGAStreamInterface(StreamInterface):
         else:
             self.device.settle = int(settle)
         self.device.settlemode = settlemode
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def sset_mode(self, mode):
         self.device.mode = mode
-        return "" # OK
+        return ""  # OK
         
     @conditional_reply("connected")
     def sjob_sset_mode(self, mode):
@@ -307,7 +309,7 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def data_on(self):
         """Returns the current data string."""
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def data_all(self):
@@ -322,30 +324,30 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def pset_points(self, points):
         self.device.points = points
-        return "" # OK
+        return ""  # OK
 
     @conditional_reply("connected")
     def quit(self):
-        return "" # OK
+        return ""  # OK
         
         
     @conditional_reply("connected")
     def sset_state_Abort(self):
         if self.device.stat:
             self.device.stop()
-        return "" # OK
+        return ""  # OK
 
     @conditional_reply("connected")
     def sval(self):
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def l999_scan(self):
-        return "" # OK
+        return ""  # OK
     
     @conditional_reply("connected")
     def tdel_all(self):
-        return "" # OK
+        return ""  # OK
 
     def lmin_mass(self):
         return self.device.min_mass

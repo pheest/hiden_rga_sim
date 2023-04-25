@@ -48,62 +48,24 @@ class ScanThread(threading.Thread):
             if self._device._stopping:
                 break
             self._device.scan()
-            if self._device._cycles != 0:
+            if self._device.cycles != 0:
                 cycle += 1
 
+
 class ScannerRow:
-    def __init__(self, start, stop, step):
-        self._start = start
-        self._stop = stop
-        self._step = step
-        
-    @property
-    def start(self):
-        return self._start
-
-    @start.setter
-    def start(self, start) :
-        self._start = start
-
-    @property
-    def stop(self) :
-        return self._stop
-        
-    @stop.setter
-    def stop(self, stop) :
-        self._stop = stop
-
-    @property
-    def step(self) :
-        return self._stop
-        
-    @step.setter
-    def step(self, step) :
-        self._step = step
-        
-class Scanner:
     def __init__(self):
-        self._rows = ScannerRow(0, 100, 0.1)
-        self._row = 1
-        self._input = "Faraday"
-        self._output = "mass"
-        
-    @property
-    def row(self):
-        return self._row
-        
-    @row.setter
-    def row(self, row):
-        self._row = row
+        self._start = 0
+        self._stop = 0
+        self._step = 1
         
     @property
     def start(self):
         return self._start
-        
+
     @start.setter
     def start(self, start):
         self._start = start
-        
+
     @property
     def stop(self):
         return self._stop
@@ -113,39 +75,89 @@ class Scanner:
         self._stop = stop
 
     @property
-    def input(self):
-        return self._input
-            
-    @input.setter
-    def input(self, input):
-        self._input = input
+    def step(self):
+        return self._step
+        
+    @step.setter
+    def step(self, step):
+        self._step = step
+
+
+class Scanner:
+    def __init__(self):
+        self._rows = [ScannerRow()]
+        self._current_row = 0
+        self._scan_input = "Faraday"
+        self._scan_output = "mass"
+        
+    @property
+    def rows(self):
+        return self._rows
+        
+    @property
+    def current_row(self):
+        return self._current_row
+        
+    @current_row.setter
+    def current_row(self, current_row):
+        if len(self._rows) <= current_row:
+            self._rows.insert(current_row, ScannerRow())
+        self._current_row = current_row
+        
+    @property
+    def start(self):
+        return self._rows[self.current_row].start
+        
+    @start.setter
+    def start(self, start):
+        self._rows[self.current_row].start = start
+        
+    @property
+    def stop(self):
+        return self._rows[self.current_row].stop
+        
+    @stop.setter
+    def stop(self, stop):
+        self._rows[self.current_row].stop = stop
+        
+    @property
+    def step(self):
+        return self._rows[self.current_row].step
+        
+    @step.setter
+    def step(self, step):
+        self._rows[self.current_row].step = step
 
     @property
-    def ouput(self):
-        return self._ouput
+    def scan_input(self):
+        return self._scan_input
             
-    @input.setter
-    def output(self, output):
-        self._output = output
+    @scan_input.setter
+    def scan_input(self, input):
+        self._scan_input = input
+
+    @property
+    def scan_output(self):
+        return self._scan_ouput
+            
+    @scan_output.setter
+    def scan_output(self, output):
+        self._scan_output = output
 
         
 class SimulatedHidenRGA(StateMachineDevice):
     def __init__(self):
         super().__init__()
         self._scan_thread = None
-        self._Ascans = Scanner
-        self._Bscans = None
-        self._current_scan = self._Ascans
+        self._current_scan = None
         self._gasses = gasses.Gasses()
         self._current_gas = None
         self._initialize_data()
 
     def _initialize_data(self):
-        self.reset()
-
-    def reset(self):
         self.connected = True
         self._name = "HAL RC RGA 201 #13656"
+        self._scans = {}
         self._terse = False
         self._min_mass = 0
         self._max_mass = 100
@@ -169,6 +181,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._settlemode = True
         self._noise = 1E-9
         self._total_pressure = 0
+        self._terse = True
 
     def _get_state_handlers(self):
         """
@@ -199,14 +212,18 @@ class SimulatedHidenRGA(StateMachineDevice):
     @terse.setter
     def terse(self, terse):
         self._terse = terse
+        
+    @property
+    def data_queue(self):
+        return self._data_queue
 
     def data(self, all=False):
         fields_in_report = 0;
-        if (self.report & 16) != 0: # Bit 4, elapsed time in ms
+        if (self.report & 16) != 0:  # Bit 4, elapsed time in ms
             fields_in_report += 1
-        if (self.report & 4) != 0:  # Bit 2, output value
+        if (self.report & 4) != 0:   # Bit 2, output value
             fields_in_report += 1
-        if (self.report & 1) != 0:  # Bit 0, return input value
+        if (self.report & 1) != 0:   # Bit 0, return input value
             fields_in_report += 1
     
         if self._data_queue.empty():
@@ -224,22 +241,30 @@ class SimulatedHidenRGA(StateMachineDevice):
         while point < return_size:
             if self._stopping:
                 break
-            scan_point = self._data_queue.get()
-            if scan_point == self._current_scan.start:
-                return_string += "["
-            return_string += str(scan_point)
-            self._data_queue.task_done()
-            return_string += ","
-            value = self._data_queue.get()
-            return_string += str(value)
-            self._data_queue.task_done()
-            return_string += ","
-            if scan_point >= self._current_scan.stop:
-                return_string += "]"
-                if not self.stat:
-                    return_string += "!"
+            if self._data_queue.empty():
                 break
+            if (self.report & 4) != 0:
+                scan_point = self._data_queue.get()
+                if scan_point == self.current_scan.start:
+                    return_string += "{"
+                return_string += str(scan_point)
+                self._data_queue.task_done()
+                return_string += ":"
+            if (self.report & 1) != 0:
+                value = self._data_queue.get()
+                if value >= 0:
+                    return_string += " "
+                return_string += str(value)
+                self._data_queue.task_done()
+                return_string += ","
+            if (self.report & 4) != 0:
+                if scan_point >= self.current_scan.stop:
+                    return_string += "}"
+                    if not self.stat:
+                        return_string += "!"
+                    break
             point += 1
+        self.log.info("Data returned " + return_string)
         return return_string
 
     @property
@@ -267,28 +292,42 @@ class SimulatedHidenRGA(StateMachineDevice):
         return self._overtemp
 
     @property
-    def row(self):
-        return self._current_scan.row
+    def current_scan(self):
+        return self._current_scan
 
-    @row.setter
-    def row(self, row):
-        self._current_scan.row = row
-
-    @property
-    def output(self):
-        return self_current_scan.output
-
-    @output.setter
-    def output(self, output):
-        self._current_scan.output = output
+    @current_scan.setter
+    def current_scan(self, current_scan):
+        if current_scan not in self._scans:
+            self._scans[current_scan] = Scanner()
+        self._current_scan = self._scans[current_scan]
 
     @property
-    def input(self):
-        return self._current_scan.input
+    def current_row(self):
+        return self._current_scan.current_row
+        
+    @current_row.setter
+    def current_row(self, current_row):
+        self._current_scan.current_row = current_row
 
-    @input.setter
-    def input(self, input):
-        self._current_scan.input = input
+    @property
+    def rows(self):
+        return self._current_scan.rows
+        
+    @property
+    def scan_output(self):
+        return self_current_scan.scan_output
+
+    @scan_output.setter
+    def scan_output(self, output):
+        self._current_scan.scan_output = output
+
+    @property
+    def scan_input(self):
+        return self._current_scan.scan_input
+
+    @scan_input.setter
+    def scan_input(self, input):
+        self._current_scan.scan_input = input
 
     @property
     def min_mass(self):
@@ -461,7 +500,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self._total_pressure > 1E-4:
             self._ptrip = True
             self._emission = 0
-            self._input = "Faraday"
+            self._scan_input = "Faraday"
         self._gasses.gas(self._current_gas).partial_pressure = partial_pressure
         
     @property
@@ -481,17 +520,16 @@ class SimulatedHidenRGA(StateMachineDevice):
             return False
         return self._scan_thread.is_alive()
 
-    def stop(self):
+    def stop(self, stopping=True):
         """Stops scanning immediately """
         self.log.info("Stop scanning now.")
-        self._stopping = True
+        self._stopping = stopping
         if self._scan_thread is not None:
             self._scan_thread.join()
         self._scan_thread = None
 
-    def scan(self):
+    def scan_row(self, start_time):
         data_point = 0
-        start_time = time.monotonic
         data_points = round((self.scan_stop - self.scan_start) / self.scan_step)
         while data_point <= data_points:
             if self._stopping:
@@ -499,7 +537,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             scan_point = self.scan_start + self.scan_step * data_point
             time.sleep(self._dwell / 1000.0)
             noise = normal(-self._noise, self._noise)
-            if self._current_scan.input == "SEM":
+            if self._current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
                 noise /= 1000
             signal = self._gasses.signal(scan_point, self._electron_energy)
@@ -510,6 +548,11 @@ class SimulatedHidenRGA(StateMachineDevice):
             if (self.report & 1) != 0:  # Bit 0, return input value
                 self._data_queue.put(signal + noise)
             data_point += 1
+            
+    def scan(self):
+        start_time = time.monotonic
+        for self.current_row, item in enumerate(self._current_scan.rows):
+            self.scan_row(start_time)
 
 
 if __name__ == '__main__':
@@ -518,11 +561,26 @@ if __name__ == '__main__':
     Simulator.current_gas = "H2"
     Simulator.current_gas_pressure = 1E-7
     Simulator.current_gas = "H2O"
-    Simulator.current_gas_pressure = 1E-7
+    Simulator.current_gas_pressure = 2E-7
+    Simulator.current_gas = "CO"
+    Simulator.current_gas_pressure = 3E-7
     Simulator.noise = 0
-    Simulator.cycles = 5
+    Simulator.cycles = 1
+    Simulator.current_scan = "Ascans"
+    Simulator.current_row = 0
     Simulator.scan_step = 0.2
     Simulator.scan_start = 1
-    Simulator.scan_stop = 50
-    Simulator.scan()
-    print(Simulator.data(True))
+    Simulator.scan_stop = 3
+    Simulator.current_row = 1
+    Simulator.scan_step = 0.2
+    Simulator.scan_start = 17
+    Simulator.scan_stop = 19
+    Simulator.current_row = 2
+    Simulator.scan_step = 0.2
+    Simulator.scan_start = 27
+    Simulator.scan_stop = 29
+    Simulator.start()
+    Simulator.stop(False)
+    print(Simulator.data(False))
+    assert(Simulator.data_queue.empty())
+    assert(Simulator.data() == "*C110*")
