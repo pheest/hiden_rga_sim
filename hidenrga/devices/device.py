@@ -54,8 +54,8 @@ class ScanThread(threading.Thread):
 
 class ScannerRow:
     def __init__(self):
-        self._start = 0
-        self._stop = 0
+        self._start = 2
+        self._stop = 50
         self._step = 1
         
     @property
@@ -149,15 +149,16 @@ class SimulatedHidenRGA(StateMachineDevice):
     def __init__(self):
         super().__init__()
         self._scan_thread = None
-        self._current_scan = None
         self._gasses = gasses.Gasses()
         self._current_gas = None
+        self._name = "HAL RC RGA 101X #17995"
+        self._release = "Release 3.2, 26/4/23"
         self._initialize_data()
 
     def _initialize_data(self):
         self.connected = True
-        self._name = "HAL RC RGA 201 #13656"
         self._scans = {}
+        self._current_scan = None
         self._terse = False
         self._min_mass = 0
         self._max_mass = 100
@@ -183,6 +184,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._total_pressure = 0
         self._terse = True
 
+    def reset(self):
+        self._initialize_data()
+        
     def _get_state_handlers(self):
         """
         Returns: states and their names
@@ -204,6 +208,10 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def name(self):
         return self._name
+
+    @property
+    def id(self):
+        return self._name.split("#",1)[1]
 
     @property
     def terse(self):
@@ -243,6 +251,10 @@ class SimulatedHidenRGA(StateMachineDevice):
                 break
             if self._data_queue.empty():
                 break
+            if (self.report & 16) != 0:
+                time_point = self._data_queue.get()
+                return_string += "/" + str(time_point) + "/"
+                self._data_queue.task_done()
             if (self.report & 4) != 0:
                 scan_point = self._data_queue.get()
                 if scan_point == self.current_scan.start:
@@ -507,7 +519,10 @@ class SimulatedHidenRGA(StateMachineDevice):
     def total_pressure(self):
         return self._total_pressure
 
-    def start(self):
+    def start(self, current_scan):
+        if current_scan not in self._scans:
+            self._scans[current_scan] = Scanner()
+        self._current_scan = self._scans[current_scan]
         self._scan_thread = ScanThread(self, "scan_thread")
         while not self._data_queue.empty():
             self._data_queue.get()
@@ -541,16 +556,17 @@ class SimulatedHidenRGA(StateMachineDevice):
                 # Lower noise in SEM mode.
                 noise /= 1000
             signal = self._gasses.signal(scan_point, self._electron_energy)
-            if (self.report & 16) != 0: # Bit 4, elapsed time in ms
-                self._data_queue.put((time.monotonic - start_time) * 1000)
-            if (self.report & 4) != 0:  # Bit 2, output value
+            if (self.report & 16) != 0:  # Bit 4, elapsed time in ms
+                elapsed = int((time.monotonic() - start_time) * 1000)
+                self._data_queue.put(elapsed)
+            if (self.report & 4) != 0:   # Bit 2, output value
                 self._data_queue.put(scan_point)
-            if (self.report & 1) != 0:  # Bit 0, return input value
+            if (self.report & 1) != 0:   # Bit 0, return input value
                 self._data_queue.put(signal + noise)
             data_point += 1
             
     def scan(self):
-        start_time = time.monotonic
+        start_time = time.monotonic()
         for self.current_row, item in enumerate(self._current_scan.rows):
             self.scan_row(start_time)
 
@@ -558,6 +574,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 if __name__ == '__main__':
     """ For debug purpose only. """
     Simulator = SimulatedHidenRGA()
+    Simulator.report  = 21
     Simulator.current_gas = "H2"
     Simulator.current_gas_pressure = 1E-7
     Simulator.current_gas = "H2O"
@@ -579,7 +596,7 @@ if __name__ == '__main__':
     Simulator.scan_step = 0.2
     Simulator.scan_start = 27
     Simulator.scan_stop = 29
-    Simulator.start()
+    Simulator.start("mass")
     Simulator.stop(False)
     print(Simulator.data(False))
     assert(Simulator.data_queue.empty())

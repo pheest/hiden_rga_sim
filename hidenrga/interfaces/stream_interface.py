@@ -29,8 +29,10 @@ class HidenRGAStreamInterface(StreamInterface):
     """
     
     commands = {
-        CmdBuilder("get_name").escape("pget name").eos().build(),
-        CmdBuilder("get_name").escape("pget ID").eos().build(),
+        CmdBuilder("get_name").escape("pget name ").build(),
+        CmdBuilder("get_id").escape("pget ID ").build(),
+        CmdBuilder("get_release").escape("pget release ").build(),
+        CmdBuilder("get_configurationid").escape("pid# configuration ").build(),
         CmdBuilder("reset").escape("sdel all").build(),
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
@@ -39,8 +41,10 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sjob_lset").escape("sjob lset").string().build(),
         CmdBuilder("sjob_quit").escape("sjob quit").build(),
         CmdBuilder("sjob_lini").escape("sjob lini ").string().build(),
+        CmdBuilder("lput").escape("lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lput").escape("sjob lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
+        CmdBuilder("sjob_save").escape("sjob save ").string().build(),
         CmdBuilder("stat_job").escape("stat ").int().build(),
         CmdBuilder("lget_device").escape("lget ").string().build(),
         CmdBuilder("data_on").escape("data ").escape("on").build(),
@@ -75,9 +79,9 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_state_Abort").escape("sset state Abort:").build(),
         CmdBuilder("sval").escape("sval").build(),
         CmdBuilder("l999_scan").escape("l999 scan").build(),
-        CmdBuilder("lmin_mass").escape("lmin mass").build(),
-        CmdBuilder("lmax_mass").escape("lmax mass").build(),
-        CmdBuilder("lres_mass").escape("lres mass").build(),
+        CmdBuilder("lmin").escape("lmin ").string().build(),
+        CmdBuilder("lmax").escape("lmax ").string().build(),
+        CmdBuilder("lres").escape("lres ").string().build(),
         CmdBuilder("lid_multiplier").escape("lid# multiplier").build(),
         CmdBuilder("rerr").escape("rerr").build(),
     }
@@ -89,6 +93,18 @@ class HidenRGAStreamInterface(StreamInterface):
     def get_name(self):
         return self.device.name
         
+    @conditional_reply("connected")
+    def get_id(self):
+        return self.device.id
+        
+    @conditional_reply("connected")
+    def get_release(self):
+        return self.device.release
+
+    @conditional_reply("connected")
+    def get_configurationid(self):
+        return 1
+
     @conditional_reply("connected")
     def reset(self):
         self.device.reset()
@@ -129,6 +145,7 @@ class HidenRGAStreamInterface(StreamInterface):
             self.device.stop()
         return "task 1, job 1," # Task <task#>, job <job#>,
         
+    @conditional_reply("connected")
     def stop(self, any):
         if self.device.stat:
             self.device.stop()
@@ -138,18 +155,28 @@ class HidenRGAStreamInterface(StreamInterface):
     def sjob_lini(self, job):
         return "task 1, job 1," # Task <task#>, job <job#>,
         
+    @conditional_reply("connected")
     def sjob_lget(self, scan):
-        if scan == "Ascans":
-            self.device.start()
+        self.device.start(scan)
         return "task 1, job 1," # Task <task#>, job <job#>,
 
+    @conditional_reply("connected")
+    def sjob_save(self):
+        return "task 1, job 1," # Task <task#>, job <job#>,
+
+    @conditional_reply("connected")
     def lini_scan(self, scan):
+        self._device.current_scan = scan
         return ""  # OK
     
     @conditional_reply("connected")
-    def sjob_lput(self, device, val0, val1):
+    def lput(self, device, val0, val1):
         #if device == "cage":
             #self.device.cage = val1
+        #if device == "F1":
+            #self.device.F1 = val1
+        #if device == "F2":
+            #self.device.F2 = val1
         #if device == "delta-m":
             #self.device.delta-m = val1
         if device == "electron-energy":
@@ -167,6 +194,11 @@ class HidenRGAStreamInterface(StreamInterface):
         #if device = "resolution":
             #self.device.resolution = val1
        
+        return ""  # OK
+        
+    @conditional_reply("connected")
+    def sjob_lput(self, device, val0, val1):
+        self.lput(device, val0, val1)
         return "task 1, job 1,"  # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
@@ -349,18 +381,29 @@ class HidenRGAStreamInterface(StreamInterface):
     def tdel_all(self):
         return ""  # OK
 
-    def lmin_mass(self):
-        return self.device.min_mass
+    @conditional_reply("connected")
+    def lmin(self, logical_device):
+        if logical_device == "mass":
+            return self.device.min_mass
+        if logical_device == "Faraday_range":
+            return 1E-11
     
-    def lmax_mass(self):
-        return self.device.max_mass
+    @conditional_reply("connected")
+    def lmax(self, logical_device):
+        if logical_device == "mass":
+            return self.device.max_mass
+        if logical_device == "Faraday_range":
+            return 1E-5
     
-    def lres_mass(self):
+    @conditional_reply("connected")
+    def lres(self, logical_device):
         return 0.001
     
+    @conditional_reply("connected")
     def lid_multiplier(self):
         return "1"
     
+    @conditional_reply("connected")
     def rerr(self):
         return ""  # OK
     
