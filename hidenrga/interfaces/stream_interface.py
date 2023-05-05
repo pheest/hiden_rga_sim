@@ -33,6 +33,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("get_id").escape("pget ID ").build(),
         CmdBuilder("get_release").escape("pget release ").build(),
         CmdBuilder("get_configurationid").escape("pid# configuration ").build(),
+        CmdBuilder("get_configurationid").escape("pget configuration ").build(),
         CmdBuilder("reset").escape("sdel all").build(),
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
@@ -46,6 +47,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
         CmdBuilder("sjob_save").escape("sjob save ").string().build(),
         CmdBuilder("stat_job").escape("stat ").int().build(),
+        CmdBuilder("stat_task").escape("stat task ").int().build(),
         CmdBuilder("lget_device").escape("lget ").string().build(),
         CmdBuilder("data_on").escape("data ").escape("on").build(),
         CmdBuilder("data_all").escape("data ").escape("all").build(),
@@ -82,7 +84,14 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("lmin").escape("lmin ").string().build(),
         CmdBuilder("lmax").escape("lmax ").string().build(),
         CmdBuilder("lres").escape("lres ").string().build(),
-        CmdBuilder("lid_multiplier").escape("lid# multiplier").build(),
+        CmdBuilder("lid_hash").escape("lid# ").string().build(),
+        CmdBuilder("lid_dollar").escape("lid$ ").string().build(),
+        CmdBuilder("ltyp").escape("ltyp ").string().build(),
+        CmdBuilder("smax_interval").escape("smax interval ").build(),
+        CmdBuilder("lunt").escape("lunt ").string().build(),
+        CmdBuilder("luse").escape("luse ").int().build(),
+        CmdBuilder("lval").escape("lval ").int().build(),
+        CmdBuilder("rbuf").escape("rbuf ").build(),
         CmdBuilder("rerr").escape("rerr").build(),
     }
 
@@ -104,6 +113,10 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def get_configurationid(self):
         return 1
+
+    @conditional_reply("connected")
+    def get_configuration(self):
+        return ""
 
     @conditional_reply("connected")
     def reset(self):
@@ -210,6 +223,16 @@ class HidenRGAStreamInterface(StreamInterface):
         if self.device.stat:
             stat = "running"
         return "task "+str(job)+","+stat    # Task n,<status>,[job <job#>, <command>,]
+        
+    @conditional_reply("connected")
+    def stat_task(self, task):
+        """
+        where <status> is "running", "idle" or "stopped"
+        """
+        stat = "idle"
+        if self.device.stat:
+            stat = "running"
+        return "task "+str(task)+","+stat    # Task n,<status>,[job <job#>, <command>,]
         
     @conditional_reply("connected")
     def lget_device(self, devID):
@@ -327,6 +350,9 @@ class HidenRGAStreamInterface(StreamInterface):
             self.device.settle = int(settle)
         self.device.settlemode = settlemode
         return ""  # OK
+        
+    def smax_interval(self):
+        return 3600
     
     @conditional_reply("connected")
     def sset_mode(self, mode):
@@ -387,6 +413,7 @@ class HidenRGAStreamInterface(StreamInterface):
             return self.device.min_mass
         if logical_device == "Faraday_range":
             return 1E-11
+        return 0
     
     @conditional_reply("connected")
     def lmax(self, logical_device):
@@ -394,17 +421,93 @@ class HidenRGAStreamInterface(StreamInterface):
             return self.device.max_mass
         if logical_device == "Faraday_range":
             return 1E-5
+        return 0
     
     @conditional_reply("connected")
     def lres(self, logical_device):
         return 0.001
+        
+    @conditional_reply("connected")
+    def lid_hash(self, logical_device):
+        if logical_device == "state":
+            return self.device.scan_table.index(logical_device)
+            
+        if logical_device not in self.device.logical_all:
+            self.log.error("device not found")
+            return 0
+        return self.device.logical_all.index(logical_device)
     
     @conditional_reply("connected")
-    def lid_multiplier(self):
-        return "1"
+    def lid_dollar(self, logical_device):
+        if logical_device == "all":
+            return ' '.join(self.device.logical_all)
+        if logical_device == "groups":
+            return ' '.join(self.device.logical_groups)
+        if logical_device == "rangedev":
+            return ' '.join(self.device.logical_rangedev)
+        if logical_device == "control":
+            return ' '.join(self.device.logical_control)
+        if logical_device == "degassing":
+            return ""
+        if logical_device == "environment":
+            return ' '.join(self.device.logical_environment)
+        if logical_device == "global":
+            return ' '.join(self.device.logical_global)
+        if logical_device == "input":
+            return ' '.join(self.device.logical_input)
+        if logical_device == "map":
+            return ' '.join(self.device.logical_map)
+        if logical_device == "measurement":
+            return ' '.join(self.device.logical_measurement)
+        if logical_device == "mode":
+            return ' '.join(self.device.logical_mode)
+        if logical_device == "others":
+            return ' '.join(self.device.logical_others)
+        if logical_device == "output":
+            return ' '.join(self.device.logical_output)
+        if logical_device == "quad":
+            return ' '.join(self.device.logical_quad)
+        if logical_device == "switched":
+            return ' '.join(self.device.logical_switched)
+        if logical_device == "total/partial":
+            return ' '.join(self.device.logical_total_partial)
+        return ""
+    
+    @conditional_reply("connected")
+    def ltyp(self, logical_device):
+        if logical_device == "quad":
+            return "tune-group"
+        if logical_device == "groups":
+            return ' '.join(self.device.logical_groups)
+        if logical_device == "rangedev":
+            return ' '.join(self.device.logical_rangedev)
+        return "group"
+        
+    @conditional_reply("connected")
+    def luse(self, logical_index):
+        logical_device = "unknown"
+        if logical_index < len(self.device.logical_all):
+            logical_device = self.device.logical_all[logical_index]
+        self.log.info("logical device " + logical_device)
+        return logical_device
     
     @conditional_reply("connected")
     def rerr(self):
+        return ""  # OK
+
+    @conditional_reply("connected")
+    def lunt(self, logical_device):
+        if logical_device == "mode":
+            return 1   # RGA
+        return ""
+        
+    @conditional_reply("connected")
+    def lval(self, logical_index):
+        return "1,5.50,5.50,5.50,5.50,5.50,5.50,5.50,5.50, 0.000000, 1.000000,"
+        return ""
+    
+    @conditional_reply("connected")
+    def rbuf(self):
         return ""  # OK
     
     @has_log

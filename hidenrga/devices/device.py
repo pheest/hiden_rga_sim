@@ -84,11 +84,11 @@ class ScannerRow:
 
 
 class Scanner:
-    def __init__(self):
+    def __init__(self, scan_output):
         self._rows = [ScannerRow()]
         self._current_row = 0
         self._scan_input = "Faraday"
-        self._scan_output = "mass"
+        self._scan_output = scan_output
         
     @property
     def rows(self):
@@ -153,6 +153,30 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._current_gas = None
         self._name = "HAL RC RGA 101X #17995"
         self._release = "Release 3.2, 26/4/23"
+        self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
+                            "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
+        self._logical_groups = ["rangedev","total/partial","switched","measurement","quad","degassing","mode","all","map","input", \
+                                "output","environment","others","global","control"]
+        self._logical_rangedev = ["Faraday_range","Total_range","auxiliary1_range","auxiliary2_range","nul_range"]
+        self._logical_control = ["F1","F2"]
+        self._logical_environment = ["resolution","delta-m","mass","mode-change-delay"]
+        self._logical_global = ["F1","F2","resolution","delta-m","mass","mode-change-delay"]
+        self._logical_input  = ["inhibit","filok","emok","ptrip","IO1","IO2","IO3","IO4","IO5","Faraday","Total","auxiliary1","auxiliary2", \
+                                "clock","mSecs","elapsed-time","watchdog"]
+        self._logical_map  = ["mass"]
+        self._logical_measurement = ["SEM","Faraday","Total","auxiliary1","auxiliary2"]
+        self._logical_mode = ["RGA/SIMS","F1","F2","resolution","delta-m","mass","mode-change-delay"]
+        self._logical_others = ["F1","F2"]
+        self._logical_output = ["i/p_select","local_range","head_range","trip1","trip2","optrip","emission-LED","fault-LED","RGA/SIMS", \
+                                "emissionrange","F1","F2","beam","Faraday_range","Total_range","auxiliary1_range","auxiliary2_range", \
+                                "nul_range","resolution","delta-m","mass"]
+        self._logical_quad =  ["resolution","delta-m"]
+        self._logical_switched = ["total/partial", "multiplier", "1st-dynode"]
+        self._logical_all = ["state"]
+        self._logical_all.extend(self._logical_switched)
+        self._logical_all.extend(self._logical_output)
+        self._logical_all.extend(self._logical_rangedev)
+        self._logical_all.extend(self._logical_measurement)
         self._initialize_data()
 
     def _initialize_data(self):
@@ -213,6 +237,75 @@ class SimulatedHidenRGA(StateMachineDevice):
     def id(self):
         return self._name.split("#",1)[1]
 
+    @property
+    def release(self):
+        return self._release
+        
+
+    @property
+    def scan_table(self):
+        return self._scan_table
+        
+    @property
+    def logical_all(self):
+        return self._logical_all
+        
+    @property
+    def logical_groups(self):
+        return self._logical_groups
+
+    @property
+    def logical_rangedev(self):
+        return self._logical_rangedev
+        
+    @property
+    def logical_control(self):
+        return self._logical_control
+        
+    @property
+    def logical_environment(self):
+        return self._logical_environment
+        
+    @property
+    def logical_global(self):
+        return self._logical_global
+        
+    @property
+    def logical_input(self):
+        return self._logical_input
+
+    @property
+    def logical_map(self):
+        return self._logical_map
+        
+    @property
+    def logical_measurement(self):
+        return self._logical_measurement
+        
+    @property
+    def logical_mode(self):
+        return self._logical_mode
+        
+    @property
+    def logical_others(self):
+        return self._logical_others
+        
+    @property
+    def logical_output(self):
+        return self._logical_output
+        
+    @property
+    def logical_quad(self):
+        return self._logical_quad
+        
+    @property
+    def logical_switched(self):
+        return self._logical_switched
+        
+    @property
+    def logical_total_partial(self):
+        return self._logical_total_partial
+        
     @property
     def terse(self):
         return self._terse
@@ -596,7 +689,7 @@ if __name__ == '__main__':
     Simulator.scan_step = 0.2
     Simulator.scan_start = 27
     Simulator.scan_stop = 29
-    Simulator.start("mass")
+    Simulator.start("Ascans")
     Simulator.stop(False)
     print(Simulator.data(False))
     assert(Simulator.data_queue.empty())

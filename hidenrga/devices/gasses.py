@@ -125,3 +125,14 @@ if __name__ == "__main__":
     for species in gasses.species:
         print(species.name, species.ionisation_energy, species.ionisation_efficiency(1070))
     pprint.pprint(gasses.masses)
+
+    D2 = GasSpecies("D2", 15.46658)
+    D2.partial_pressure = 1E-8
+    D2.mass = 4
+
+    He = GasSpecies("He", 24.58738)
+    He.partial_pressure = 1E-8
+    He.mass = 4
+
+    for ee in range(15, 40):
+        print(ee, ",", D2.signal(D2.mass, ee), ",", He.signal(He.mass, ee))
