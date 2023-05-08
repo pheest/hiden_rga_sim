@@ -93,6 +93,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("lval").escape("lval ").int().build(),
         CmdBuilder("rbuf").escape("rbuf ").build(),
         CmdBuilder("rerr").escape("rerr").build(),
+        CmdBuilder("eid_dollar").escape("eid$").int().build(),
     }
 
     in_terminator = "\r"
@@ -265,17 +266,17 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def sset_start(self, start):
-        self.device.scan_start = start
+        self.device.current_row_start = start
         return ""  # OK
         
     @conditional_reply("connected")
     def sset_stop(self, stop):
-        self.device.scan_stop = stop
+        self.device.current_row_stop = stop
         return ""  # OK
                 
     @conditional_reply("connected")
     def sset_step(self, step):
-        self.device.scan_step = step
+        self.device.current_row_step = step
         return ""  # OK
         
     @conditional_reply("connected")
@@ -494,6 +495,10 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def rerr(self):
         return ""  # OK
+    
+    def eid_dollar(self, err_no):
+        """ Returns the error message relating to the error code """
+        return str(err_no)
 
     @conditional_reply("connected")
     def lunt(self, logical_device):
