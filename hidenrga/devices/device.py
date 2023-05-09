@@ -369,7 +369,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                     return_string += "}]"
                     break
             point += 1
-            if point >= self.points:
+            if not all and point >= self.points:
                 break
         self.log.info("Data returned " + return_string)
         return return_string

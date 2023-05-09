@@ -162,7 +162,7 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def stop(self, any):
         if self.device.stat:
-            self.device.stop()
+            self.device.cycles = 1
         return ""  # OK
                 
     @conditional_reply("connected")
