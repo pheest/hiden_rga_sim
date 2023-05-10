@@ -23,7 +23,7 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.start("Ascans")
         self._simulator.stop(False)
         data = self._simulator.data(True)
-        # Format data do it's readable.
+        # Format data so it's readable.
         data = data.replace(",}]", "\n}]")
         data = data.replace(",", ",\n  ")
         data = data.replace("}][{", "}]\n[{")
