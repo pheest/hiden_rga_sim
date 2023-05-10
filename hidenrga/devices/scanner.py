@@ -1,3 +1,6 @@
+import queue
+
+
 class ScannerRow:
     def __init__(self):
         self._start = 2
@@ -36,6 +39,9 @@ class Scanner:
         self._scan_input = "Faraday"
         self._scan_output = scan_output
         self._report = 5
+        self._time_queue = queue.Queue()
+        self._scan_queue = queue.Queue()
+        self._data_queue = queue.Queue()
         
     @property
     def rows(self):
@@ -106,3 +112,26 @@ class Scanner:
     @report.setter
     def report(self, report):
         self._report = report
+        
+    def clear_queues(self):
+        while not self._time_queue.empty():
+            self._time_queue.get()
+            self._time_queue.task_done()
+        while not self._scan_queue.empty():
+            self._scan_queue.get()
+            self._scan_queue.task_done()
+        while not self._data_queue.empty():
+            self._data_queue.get()
+            self._data_queue.task_done()
+
+    @property
+    def time_queue(self):
+        return self._time_queue
+        
+    @property
+    def scan_queue(self):
+        return self._scan_queue
+        
+    @property
+    def data_queue(self):
+        return self._data_queue

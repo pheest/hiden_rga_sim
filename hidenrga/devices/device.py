@@ -18,7 +18,6 @@ from lewis.devices import StateMachineDevice
 from numpy.random import normal
 import time
 import threading
-import queue
 import math
 import sys
 
@@ -107,9 +106,6 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._stopping = False
         self._cycles = 0
         self._interval = 0
-        self._time_queue = queue.Queue()
-        self._scan_queue = queue.Queue()
-        self._data_queue = queue.Queue()
         self._points = 70
         self._emok = True
         self._filok = True
@@ -235,54 +231,53 @@ class SimulatedHidenRGA(StateMachineDevice):
         
     @property
     def data_queue(self):
-        return self._data_queue
+        return self.current_scan.data_queue
+
+    def next_data_point(self, current_scan):
+        return_string = ""
+        scan_point = current_scan.scan_queue.get()
+        report = current_scan.report
+        if scan_point == current_scan.start:
+            time_point = current_scan.time_queue.get()
+            if report != 0:
+                return_string += "["
+            if (report & 16) != 0:
+                return_string += "/" + str(time_point) + "/"
+            current_scan.time_queue.task_done()
+            if report != 0:
+                return_string += "{"
+        if report == 0:
+            print(current_scan.scan_output + " set to " + str(scan_point))
+        if (report & 4) != 0:
+            return_string += str(scan_point)
+            return_string += ":"
+        value = current_scan.data_queue.get()
+        if (report & 1) != 0:
+            if value >= 0:
+                return_string += " "
+            return_string += str(value)
+            return_string += ","
+        current_scan.data_queue.task_done()
+        if (report & 4) != 0:
+            if scan_point >= current_scan.stop:
+                return_string += "}]"
+        current_scan.scan_queue.task_done()
+        return return_string
 
     def data(self, all=False):
-        if self._data_queue.empty():
-            if not self.stat:
-                return "*C110*"     # No more data available
-            else:
-                return ""
-                
         point = 0
         return_string = ""
-        current_scan = None
-        for key, value in self._scans.items():
-            if value.report != 0:
-                current_scan = value
-                break
-        
-        while not self._data_queue.empty():
-            if self._stopping:
-                break
-            if self._data_queue.empty():
-                break
-            scan_point = self._scan_queue.get()
-            if scan_point == current_scan.start:
-                time_point = self._time_queue.get()
-                return_string += "["
-                if (current_scan.report & 16) != 0:
-                    return_string += "/" + str(time_point) + "/"
-                self._time_queue.task_done()
-                return_string += "{"
-            if (current_scan.report & 4) != 0:
-                return_string += str(scan_point)
-                return_string += ":"
-            self._scan_queue.task_done()
-            value = self._data_queue.get()
-            if (current_scan.report & 1) != 0:
-                if value >= 0:
-                    return_string += " "
-                return_string += str(value)
-                return_string += ","
-            self._data_queue.task_done()
-            if (current_scan.report & 4) != 0:
-                if scan_point >= current_scan.stop:
-                    return_string += "}]"
-                    #break
-            point += 1
-            if not all and point >= self.points:
-                break
+        for name, current_scan in self._scans.items():
+            if current_scan.data_queue.empty() and not self.stat:
+                return "*C110*"     # No more data available
+                
+            while not current_scan.data_queue.empty():
+                if self._stopping:
+                    break
+                return_string += self.next_data_point(current_scan)
+                point += 1
+                if not all and point >= self.points:
+                    break
         self.log.info("Data returned " + return_string)
         return return_string
 
@@ -535,9 +530,8 @@ class SimulatedHidenRGA(StateMachineDevice):
             self._scans[current_scan] = Scanner()
         self._current_scan = self._scans[current_scan]
         self._scan_thread = ScanThread(self, "scan_thread")
-        while not self._data_queue.empty():
-            self._data_queue.get()
-            self._data_queue.task_done()
+        for name, scan in self._scans.items():
+            scan.clear_queues()
         self._scan_thread.start()
 
     @property
@@ -596,27 +590,21 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self.current_scan.scan_output == "energy":
             signal = self._gasses.signal(self.mass, scan_point)
             self.electron_energy = scan_point
-            if self.report == 0:
-                print("electron_energy set to " + str(scan_point))
             
         if self.current_scan.scan_output == "mass":
             signal = self._gasses.signal(scan_point, self.electron_energy)
             self.mass = scan_point
-            if self.report == 0:
-                print("mass set to " + str(scan_point))
-        if self.report != 0:
-            # Bit 2, output value
-            self._scan_queue.put(scan_point)
-            # Bit 0, return input value
-            self._data_queue.put(signal + noise)
+        # Bit 2, output value
+        self.current_scan.scan_queue.put(scan_point)
+        # Bit 0, return input value
+        self.current_scan.data_queue.put(signal + noise)
     
     def scan_row(self, start_time):
         data_point = 0
         data_points = round((self.current_row_stop - self.current_row_start) / self.current_row_step)
         elapsed = int((time.monotonic() - start_time) * 1000.0)
-        if self.report != 0:
-            # Bit 4, elapsed time in ms
-            self._time_queue.put(elapsed)
+        # Bit 4, elapsed time in ms
+        self.current_scan.time_queue.put(elapsed)
         while data_point <= data_points:
             if self._stopping:
                 break

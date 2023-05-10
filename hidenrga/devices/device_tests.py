@@ -26,7 +26,7 @@ class TestHidenRGASimulator(unittest.TestCase):
         # Format data so it's readable.
         data = data.replace(",}]", "\n}]")
         data = data.replace(",", ",\n  ")
-        data = data.replace("}][{", "}]\n[{")
+        data = data.replace("][", "]\n[")
         print(data)
         self.assertTrue(self._simulator.data_queue.empty())
         self.assertTrue(self._simulator.data() == "*C110*")
