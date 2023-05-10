@@ -30,6 +30,7 @@ class HidenRGAStreamInterface(StreamInterface):
     
     commands = {
         CmdBuilder("get_name").escape("pget name ").build(),
+        CmdBuilder("get_id").escape("pget ID").build(),
         CmdBuilder("get_id").escape("pget ID ").build(),
         CmdBuilder("get_release").escape("pget release ").build(),
         CmdBuilder("get_configurationid").escape("pid# configuration ").build(),
@@ -472,6 +473,8 @@ class HidenRGAStreamInterface(StreamInterface):
             return ' '.join(self.device.logical_switched)
         if logical_device == "total/partial":
             return ' '.join(self.device.logical_total_partial)
+        if logical_device == "raster":
+            return ' '.join(self.device.raster)
         return ""
     
     @conditional_reply("connected")
@@ -496,6 +499,7 @@ class HidenRGAStreamInterface(StreamInterface):
     def rerr(self):
         return ""  # OK
     
+    @conditional_reply("connected")
     def eid_dollar(self, err_no):
         """ Returns the error message relating to the error code """
         return str(err_no)
