@@ -21,10 +21,16 @@ import threading
 import math
 import sys
 
-import gasses
-from scanner import Scanner
-
-
+try:
+    from . import gasses  # "emulator" case
+except ImportError:
+    import gasses  # "__main__" case
+    
+try:
+    from . import scanner  # "emulator" case
+except ImportError:
+    import scanner  # "__main__" case
+    
 class DefaultState(State):
     """
     Device is in default state.
@@ -312,7 +318,7 @@ class SimulatedHidenRGA(StateMachineDevice):
     @current_scan.setter
     def current_scan(self, current_scan):
         if current_scan not in self._scans:
-            self._scans[current_scan] = Scanner("mass")
+            self._scans[current_scan] = scanner.Scanner("mass")
         self._current_scan = self._scans[current_scan]
 
     @property
