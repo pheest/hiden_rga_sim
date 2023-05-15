@@ -45,8 +45,12 @@ class ScanThread(threading.Thread):
         self.name = name
 
     def run(self):
+        """ 
+        Thread method to aquire data
+        """
         cycle = 0
         self._device._stopping = False
+        # Cache these values as they will be overwritten
         mass = self._device.mass
         electron_energy = self._device.electron_energy
         start_time = time.monotonic()
@@ -56,6 +60,7 @@ class ScanThread(threading.Thread):
             self._device.scan(start_time)
             if self._device.cycles != 0:
                 cycle += 1
+        # Restore these values
         self._device.mass = mass
         self._device.electron_energy = electron_energy
 
@@ -240,20 +245,31 @@ class SimulatedHidenRGA(StateMachineDevice):
         return self.current_scan.data_queue
 
     def next_data_point(self, current_scan):
+        """
+        Retrieve one value queued by the scan thread from each queue.
+        """
         return_string = ""
+        # NB, this isn't the self.current_scan which is used by the aquisition thread.
         scan_point = current_scan.scan_queue.get()
         report = current_scan.report
         if scan_point == current_scan.start:
             time_point = current_scan.time_queue.get()
-            if report != 0:
-                return_string += "["
+            return_string += "["
             if (report & 16) != 0:
                 return_string += "/" + str(time_point) + "/"
             current_scan.time_queue.task_done()
-            if report != 0:
-                return_string += "{"
-        if report == 0:
-            print(current_scan.scan_output + " set to " + str(scan_point))
+            return_string += "{"
+        for name, other_scan in self._scans.items():
+            if other_scan != current_scan:
+                if not other_scan.scan_queue.empty():
+                    other_scan_point = other_scan.scan_queue.get()
+                    if other_scan_point == other_scan.start:
+                        other_scan.time_queue.get()
+                        other_scan.time_queue.task_done()
+                    other_value = other_scan.data_queue.get()
+                    print(other_scan.scan_output + " set to " + str(other_scan_point) + " at " + str(other_value))
+                    other_scan.data_queue.task_done()
+                    other_scan.scan_queue.task_done()
         if (report & 4) != 0:
             return_string += str(scan_point)
             return_string += ":"
@@ -271,20 +287,26 @@ class SimulatedHidenRGA(StateMachineDevice):
         return return_string
 
     def data(self, all=False):
+        """
+        Retrieves all currently queued data values.
+        """
         point = 0
         return_string = ""
-        for name, current_scan in self._scans.items():
-            if current_scan.data_queue.empty() and not self.stat:
-                return "*C110*"     # No more data available
-                
-            while not current_scan.data_queue.empty():
-                if self._stopping:
-                    break
-                return_string += self.next_data_point(current_scan)
-                point += 1
-                if not all and point >= self.points:
-                    break
-        self.log.info("Data returned " + return_string)
+        current_scan = None
+        for name, scan in self._scans.items():
+            if scan.report != 0:
+                current_scan = scan
+                break
+        if current_scan.data_queue.empty() and not self.stat:
+            return "*C110*"     # No more data available
+            
+        while not current_scan.data_queue.empty():
+            if self._stopping:
+                break
+            return_string += self.next_data_point(current_scan)
+            point += 1
+            if not all and point >= self.points:
+                break
         return return_string
 
     @property
@@ -532,6 +554,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         return self._total_pressure
 
     def start(self, current_scan):
+        """
+        Starts threaded data acquisition.
+        """
         if current_scan not in self._scans:
             self._scans[current_scan] = Scanner()
         self._current_scan = self._scans[current_scan]
@@ -547,7 +572,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         return self._scan_thread.is_alive()
 
     def stop(self, stopping=True):
-        """Stops scanning immediately """
+        """
+        Stops scanning immediately
+        """
         self.log.info("Stop scanning now.")
         self._stopping = stopping
         if self._scan_thread is not None:
@@ -585,31 +612,48 @@ class SimulatedHidenRGA(StateMachineDevice):
         self.current_scan.current_row_step = current_row_step
         
     def scan_value(self, data_point):
+        """
+        Acquires one data sample.
+        """
         scan_point = self.current_row_start + self.current_row_step * data_point
         time.sleep(self._dwell / 1000.0)
-        noise = normal(-self._noise, self._noise)
-        if self.current_scan.scan_input == "SEM":
-            # Lower noise in SEM mode.
-            noise /= 1000
-        if self.dwell != 0:
-            noise = noise * 100 / self.dwell
         if self.current_scan.scan_output == "energy":
-            signal = self._gasses.signal(self.mass, scan_point)
             self.electron_energy = scan_point
             
         if self.current_scan.scan_output == "mass":
-            signal = self._gasses.signal(scan_point, self.electron_energy)
             self.mass = scan_point
-        # Bit 2, output value
-        self.current_scan.scan_queue.put(scan_point)
-        # Bit 0, return input value
+        
+        signal = 0
+        noise = 0
+        if self.current_scan.scan_input == "SEM" or self.current_scan.scan_input == "Faraday":
+            signal = self._gasses.signal(self.mass, self.electron_energy)
+            noise = normal(-self._noise, self._noise)
+            if self.current_scan.scan_input == "SEM":
+                # Lower noise in SEM mode.
+                noise /= 1000
+            if self.dwell != 0:
+                noise = noise * 100 / self.dwell
+
+        if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
+            other_scan = self._scans[self.current_scan.scan_input]
+            if other_scan.scan_output == "energy":
+                signal = self.electron_energy
+            if other_scan.scan_output == "mass":
+                signal = self.mass
+                
+        # Bit 0, return input value. NB, not neccecarily used for report.
         self.current_scan.data_queue.put(signal + noise)
+        # Bit 2, output value. NB, not neccecarily used for report.
+        self.current_scan.scan_queue.put(scan_point)
     
     def scan_row(self, start_time):
+        """
+        Scans the current row.
+        """
         data_point = 0
         data_points = round((self.current_row_stop - self.current_row_start) / self.current_row_step)
         elapsed = int((time.monotonic() - start_time) * 1000.0)
-        # Bit 4, elapsed time in ms
+        # Bit 4, elapsed time in ms. NB, not neccecarily used for report.
         self.current_scan.time_queue.put(elapsed)
         while data_point <= data_points:
             if self._stopping:

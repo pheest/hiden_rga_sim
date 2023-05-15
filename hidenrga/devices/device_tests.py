@@ -1,4 +1,4 @@
-from device import SimulatedHidenRGA
+import device
 
 import unittest
 
@@ -6,7 +6,7 @@ import unittest
 class TestHidenRGASimulator(unittest.TestCase):
 
     def setUp(self):
-        self._simulator = SimulatedHidenRGA()
+        self._simulator = device.SimulatedHidenRGA()
         self._simulator.current_gas = "H2"
         self._simulator.current_gas_pressure = 1E-7
         self._simulator.current_gas = "D2"
@@ -18,11 +18,16 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.current_gas = "CO"
         self._simulator.current_gas_pressure = 5E-7
         self._simulator.dwell = 0
-        
+
     def Ascan(self):
         self._simulator.start("Ascans")
-        self._simulator.stop(False)
         data = self._simulator.data(True)
+        self._simulator.stop(False)
+        while True:
+            new_data = self._simulator.data(False)
+            if new_data == "*C110*":
+                break
+            data += new_data
         # Format data so it's readable.
         data = data.replace(",}]", "\n}]")
         data = data.replace(",", ",\n  ")

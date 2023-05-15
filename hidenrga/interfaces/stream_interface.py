@@ -431,9 +431,6 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def lid_hash(self, logical_device):
-        if logical_device == "state":
-            return self.device.scan_table.index(logical_device)
-            
         if logical_device not in self.device.logical_all:
             self.log.error("device not found")
             return 0
