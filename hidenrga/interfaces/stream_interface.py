@@ -30,20 +30,23 @@ class HidenRGAStreamInterface(StreamInterface):
     
     commands = {
         CmdBuilder("get_name").escape("pget name ").build(),
-        CmdBuilder("get_id").escape("pget ID").build(),
-        CmdBuilder("get_id").escape("pget ID ").build(),
+        CmdBuilder("get_name").escape("pget name").build(),
+        CmdBuilder("get_name").escape("pget ID").build(),
+        CmdBuilder("get_name").escape("pget ID ").build(),
         CmdBuilder("get_release").escape("pget release ").build(),
         CmdBuilder("get_configurationid").escape("pid# configuration ").build(),
         CmdBuilder("get_configurationid").escape("pget configuration ").build(),
-        CmdBuilder("reset").escape("sdel all").build(),
+        CmdBuilder("sdel_all").escape("sdel all").build(),
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
         CmdBuilder("set_terse").escape("pset terse ").int().build(),
         CmdBuilder("sjob_sdel_all").escape("sjob sdel all").build(),
+        CmdBuilder("lset").escape("lset ").string().int().build(),
         CmdBuilder("sjob_lset").escape("sjob lset").string().build(),
         CmdBuilder("sjob_quit").escape("sjob quit").build(),
         CmdBuilder("sjob_lini").escape("sjob lini ").string().build(),
-        CmdBuilder("lput").escape("lput ").string().float().escape(" ").float().build(),
+        CmdBuilder("lput1").escape("lput ").string().float().build(),
+        CmdBuilder("lput2").escape("lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lput").escape("sjob lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
         CmdBuilder("sjob_save").escape("sjob save ").string().build(),
@@ -105,24 +108,21 @@ class HidenRGAStreamInterface(StreamInterface):
         return self.device.name
         
     @conditional_reply("connected")
-    def get_id(self):
-        return self.device.id
-        
-    @conditional_reply("connected")
     def get_release(self):
         return self.device.release
 
     @conditional_reply("connected")
     def get_configurationid(self):
-        return 1
+        return 2
 
     @conditional_reply("connected")
     def get_configuration(self):
         return ""
 
     @conditional_reply("connected")
-    def reset(self):
+    def sdel_all(self):
         self.device.reset()
+        return "" #OK
         
     @conditional_reply("connected")
     def set_terse(self, terse):
@@ -151,6 +151,12 @@ class HidenRGAStreamInterface(StreamInterface):
         return "task 1, job 1," # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
+    def lset(self, device, param):
+        if device == "delay":
+           time.sleep(param)
+        return "" # OK
+        
+    @conditional_reply("connected")
     def sjob_lset(self, job):
         return "task 1, job 1," # Task <task#>, job <job#>,
         
@@ -172,6 +178,7 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def sjob_lget(self, scan):
+        self.log.info("Starting " + scan)
         self.device.start(scan)
         return "task 1, job 1," # Task <task#>, job <job#>,
 
@@ -183,9 +190,9 @@ class HidenRGAStreamInterface(StreamInterface):
     def lini_scan(self, scan):
         self._device.current_scan = scan
         return ""  # OK
-    
+
     @conditional_reply("connected")
-    def lput(self, device, val0, val1):
+    def lput1(self, device, val0):
         #if device == "cage":
             #self.device.cage = val1
         #if device == "F1":
@@ -195,9 +202,9 @@ class HidenRGAStreamInterface(StreamInterface):
         #if device == "delta-m":
             #self.device.delta-m = val1
         if device == "electron-energy":
-            self.device.electron_energy = val1
+            self.device.electron_energy = val0
         if device == "emission":
-            self.device.emission = val1
+            self.device.emission = val0
         #if device = "focus":
             #self.device.focus = val1
         #if device = "mass":
@@ -208,8 +215,11 @@ class HidenRGAStreamInterface(StreamInterface):
             #self.device.multiplier = val1
         #if device = "resolution":
             #self.device.resolution = val1
-       
         return ""  # OK
+    
+    @conditional_reply("connected")
+    def lput2(self, device, val0, val1):
+        return self.lput1(device, val1)
         
     @conditional_reply("connected")
     def sjob_lput(self, device, val0, val1):
@@ -336,9 +346,9 @@ class HidenRGAStreamInterface(StreamInterface):
         # Either e.g. 100 (time in ms) or eg 100% (percent of default value)
         dwellmode = dwell[len(dwell)-1]=='%'
         if dwellmode:
-            self.device.dwell = int(dwell[:-1])
+            self.device.dwell = float(dwell[:-1])
         else:
-            self.device.dwell = int(dwell)
+            self.device.dwell = float(dwell)
         self.device.dwellmode = dwellmode
         return ""  # OK
     
@@ -347,14 +357,14 @@ class HidenRGAStreamInterface(StreamInterface):
         # Either e.g. 100 (time in ms) or eg 100% (percent of default value)
         settlemode = settle[len(settle)-1]=='%'
         if settlemode:
-            self.device.settle = int(settle[:-1])
+            self.device.settle = float(settle[:-1])
         else:
-            self.device.settle = int(settle)
+            self.device.settle = float(settle)
         self.device.settlemode = settlemode
         return ""  # OK
         
     def smax_interval(self):
-        return 3600
+        return 86400.000
     
     @conditional_reply("connected")
     def sset_mode(self, mode):
@@ -368,12 +378,16 @@ class HidenRGAStreamInterface(StreamInterface):
        
     @conditional_reply("connected")
     def data_on(self):
-        """Returns the current data string."""
+        """
+        Enables data return.
+        """
         return ""  # OK
     
     @conditional_reply("connected")
     def data_all(self):
-        """Returns the current data string."""
+        """
+        Returns all of the current data string.
+        """
         return self.device.data(True)
     
     @conditional_reply("connected")
@@ -389,8 +403,7 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def quit(self):
         return ""  # OK
-        
-        
+    
     @conditional_reply("connected")
     def sset_state_Abort(self):
         if self.device.stat:
@@ -432,65 +445,39 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def lid_hash(self, logical_device):
         if logical_device not in self.device.logical_all:
-            self.log.error("device not found")
+            self.log.warn("device not found")
             return 0
         return self.device.logical_all.index(logical_device)
     
     @conditional_reply("connected")
     def lid_dollar(self, logical_device):
+        return_value = '"'
         if logical_device == "all":
-            return ' '.join(self.device.logical_all)
-        if logical_device == "groups":
-            return ' '.join(self.device.logical_groups)
-        if logical_device == "rangedev":
-            return ' '.join(self.device.logical_rangedev)
-        if logical_device == "control":
-            return ' '.join(self.device.logical_control)
-        if logical_device == "degassing":
-            return ""
-        if logical_device == "environment":
-            return ' '.join(self.device.logical_environment)
-        if logical_device == "global":
-            return ' '.join(self.device.logical_global)
-        if logical_device == "input":
-            return ' '.join(self.device.logical_input)
-        if logical_device == "map":
-            return ' '.join(self.device.logical_map)
-        if logical_device == "measurement":
-            return ' '.join(self.device.logical_measurement)
-        if logical_device == "mode":
-            return ' '.join(self.device.logical_mode)
-        if logical_device == "others":
-            return ' '.join(self.device.logical_others)
-        if logical_device == "output":
-            return ' '.join(self.device.logical_output)
-        if logical_device == "quad":
-            return ' '.join(self.device.logical_quad)
-        if logical_device == "switched":
-            return ' '.join(self.device.logical_switched)
-        if logical_device == "total/partial":
-            return ' '.join(self.device.logical_total_partial)
-        if logical_device == "raster":
-            return ' '.join(self.device.raster)
-        return ""
+            return_value += '","'.join(self.device.logical_all)
+        elif logical_device == "groups":
+            return_value += '","'.join(self.device.logical_groups)
+        else:
+            return_value += '","'.join(self.device.logical_group(logical_device))
+        return_value += '",'
+        return return_value
     
     @conditional_reply("connected")
     def ltyp(self, logical_device):
-        if logical_device == "quad":
-            return "tune-group"
-        if logical_device == "groups":
-            return ' '.join(self.device.logical_groups)
-        if logical_device == "rangedev":
-            return ' '.join(self.device.logical_rangedev)
-        return "group"
+        if logical_device in self.device.logical_groups:
+            return "group"
+        return self.device.logical_group(logical_device)
         
-    @conditional_reply("connected")
-    def luse(self, logical_index):
+    def logical_device(self, logical_index):
         logical_device = "unknown"
         if logical_index < len(self.device.logical_all):
             logical_device = self.device.logical_all[logical_index]
         self.log.info("logical device " + logical_device)
         return logical_device
+    
+        
+    @conditional_reply("connected")
+    def luse(self, logical_index):
+        return self.logical_device(logical_index)
     
     @conditional_reply("connected")
     def rerr(self):
@@ -509,8 +496,60 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def lval(self, logical_index):
-        return "1,5.50,5.50,5.50,5.50,5.50,5.50,5.50,5.50, 0.000000, 1.000000,"
-        return ""
+        logical_device = self.logical_device(logical_index)
+            
+        if logical_device in ["Total_range", "Faraday_range"]:
+            return "0, -5,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["SEM_range"]:
+            return "0, -7,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["watchdog-active", "scan", "remote-io-slaves", "emsafe", "client-connected"] :
+            return "0, 1,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["uptime"]:
+            return "0, 0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s,0d 0h 0m 0s, 0,0,"
+        if logical_device in ["testpoint", "ip-select"]:
+            return "0, 4,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["shutdown"]:
+            return "0, 0,0,0,0,0,0,0,1, 0,0,"
+        if logical_device in ["multiplier"]:
+            return "0, 0,850,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["mode-change-delay"]:
+            return "0, 0,1000,1000,1000,1000,0,0,0, 0,0,"
+        if logical_device in ["mass-scale"]:
+            return "0, 1,1,2,3,4,1,1,1, 0,0,"
+        if logical_device in ["mass-range"]:
+            return "0, 200.00,200.00,200.00,200.00,200.00,200.00,200.00,200.00, 0,0,"
+        if logical_device in ["mass"]:
+            return "0, 5.50,49.00,5.50,5.50,5.50,5.50,5.50,20.00, 0,0,"
+        if logical_device in ["focus"]:
+            return "0, -90,-90,-90,-90,-90,-90,-90,-90, 0,0,"
+        if logical_device in ["enable-PIA"]:
+            return "0, 1,1,1,1,1,1,1,0, 0,0,"
+        if logical_device in ["emission-value"]:
+            return "0, 20.00000,0.00000,0.00000,0.00000,0.00000,0.00000,0.00000,0.00000, 0,0,"
+        if logical_device in ["emission-limit"]:
+            return "0, 5000.000,0.000,0.000,0.000,0.000,0.000,0.000,0.000, 0,0,"
+        if logical_device in ["emission"]:
+            return "0, 20.000,1000.000,1000.000,1000.000,1000.000,20.000,20.000,2700.000, 0,0,"
+        if logical_device in ["electron-energy", "electron-energy-DAC"]:
+            return "0, 70.0,70.0,70.0,70.0,4.0,4.0,4.0,135.0, 0,0,"
+        if logical_device in ["display-error", "display-line"]:
+            return "0, ,,,,,,,, 0,0,"
+        if logical_device in ["clock"]:
+            return "0, 01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00,01/01/70 00:00:00, 0,0,"
+        if logical_device in ["cage"]:
+            return "0, 0.0,3.0,0.0,0.0,0.0,0.0,5.0,-5.0, 0,0,"
+        if logical_device in ["beep"]:
+            return "0, 200,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["RGA-SIMS"]:
+            return "0, 200,0,0,0,0,0,0,0, 0,0,"
+        if logical_device in ["P5V12"]:
+            return "0, 1480400.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000, 0,0,"
+        if logical_device in ["N10V24"]:
+            return "0, 48050.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000, 0,0,"
+        if logical_device in ["0V"]:
+            return "0, 1003100.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000, 0,0,"
+
+        return "0, 0,0,0,0,0,0,0,0, 0,0,"
     
     @conditional_reply("connected")
     def rbuf(self):

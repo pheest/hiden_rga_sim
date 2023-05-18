@@ -1,4 +1,5 @@
 ##################################################
+##################################################
 #
 # Device simulator File
 #
@@ -38,68 +39,87 @@ class DefaultState(State):
     NAME = 'Default'
 
 
-class ScanThread(threading.Thread):
-    def __init__(self, device, name):
-        super().__init__()
-        self._device = device
-        self.name = name
-
-    def run(self):
-        """ 
-        Thread method to aquire data
-        """
-        cycle = 0
-        self._device._stopping = False
-        # Cache these values as they will be overwritten
-        mass = self._device.mass
-        electron_energy = self._device.electron_energy
-        start_time = time.monotonic()
-        while self._device.cycles == 0 or cycle < self._device.cycles:
-            if self._device._stopping:
-                break
-            self._device.scan(start_time)
-            if self._device.cycles != 0:
-                cycle += 1
-        # Restore these values
-        self._device.mass = mass
-        self._device.electron_energy = electron_energy
-
-
 class SimulatedHidenRGA(StateMachineDevice):
+    class ScanThread(threading.Thread):
+        def __init__(self, device, name):
+            super().__init__()
+            self._device = device
+            self.name = name
+
+        def run(self):
+            """ 
+            Thread method to aquire data
+            """
+            self._device.log.info("Starting thread")
+            cycle = 0
+            self._device._stopping = False
+            # Cache these values as they will be overwritten
+            mass = self._device.mass
+            electron_energy = self._device.electron_energy
+            start_time = time.monotonic()
+            while self._device.cycles == 0 or cycle < self._device.cycles:
+                if self._device._stopping:
+                    break
+                self._device.scan(start_time)
+                if self._device.cycles != 0:
+                    cycle += 1
+            # Restore these values
+            self._device.mass = mass
+            self._device.electron_energy = electron_energy
+            self._device.log.info("Exiting thread")
+
+    class Logical:
+        def __init__(self):
+            self._groups = {}
+            self._groups["MFC"] = ["MFC1","MFC1_flow"]
+            self._groups["ADAM-4017-1"] = ["ADAM-4017-1-range","ADAM-4017-1-type","input1","input2","input3","input4","input5"]
+            self._groups["rangedev"] = ["Faraday_range","Total_range","auxiliary1_range","auxiliary2_range","nul_range"]
+            self._groups["control"] = ["F1","F2"]
+            self._groups["environment"] = ["resolution","delta-m","mass","mode-change-delay"]
+            self._groups["global"] = ["F1","F2","resolution","delta-m","mass","mode-change-delay"]
+            self._groups["input"] = ["inhibit","filok","emok","ptrip","IO1","IO2","IO3","IO4","IO5","Faraday","Total","auxiliary1","auxiliary2", \
+                                     "clock","mSecs","elapsed-time","watchdog"]
+            self._groups["map"] = ["mass"]
+            self._groups["measurement"] = ["SEM","Faraday","Total","auxiliary1","auxiliary2"]
+            self._groups["mode"] = ["RGA/SIMS","F1","F2","resolution","delta-m","mass","mode-change-delay"]
+            self._groups["others"] = ["F1","F2"]
+            self._groups["output"] = ["i/p_select","local_range","head_range","trip1","trip2","optrip","emission-LED","fault-LED","RGA/SIMS", \
+                                      "emissionrange","F1","F2","beam","Faraday_range","Total_range","auxiliary1_range","auxiliary2_range", \
+                                      "nul_range","resolution","delta-m","mass"]
+            self._groups["quad"] =  ["resolution","delta-m"]
+            self._groups["switched"] = ["total/partial", "multiplier", "1st-dynode"]
+            self._groups["total-partial"] = ["T/P","mass"]
+            self._groups["tune-group"] = ["MFC", "detector","filter","quad","source"]
+            self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
+                                "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
+            self._all = []
+            for name, group in self._groups.items():
+                for device in group:
+                    if device not in self._groups.items() and device not in self._all:
+                        self._all.append(device)
+            self._all.extend(self._scan_table)
+        
+        @property
+        def groups(self):
+            return self._groups
+            
+        @property
+        def all(self):
+            return self._all
+            
+        @property
+        def scan_table(self):
+            return self._scan_table
+        
     def __init__(self):
         super().__init__()
         self._scan_thread = None
         self._gasses = gasses.Gasses()
         self._current_gas = None
         self._name = "HAL RC RGA 101X #17995"
-        self._release = "Release 3.2, 26/4/23"
-        self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
-                            "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
-        self._logical_groups = ["rangedev","total/partial","switched","measurement","quad","degassing","mode","all","map","input", \
-                                "output","environment","others","global","control"]
-        self._logical_rangedev = ["Faraday_range","Total_range","auxiliary1_range","auxiliary2_range","nul_range"]
-        self._logical_control = ["F1","F2"]
-        self._logical_environment = ["resolution","delta-m","mass","mode-change-delay"]
-        self._logical_global = ["F1","F2","resolution","delta-m","mass","mode-change-delay"]
-        self._logical_input  = ["inhibit","filok","emok","ptrip","IO1","IO2","IO3","IO4","IO5","Faraday","Total","auxiliary1","auxiliary2", \
-                                "clock","mSecs","elapsed-time","watchdog"]
-        self._logical_map  = ["mass"]
-        self._logical_measurement = ["SEM","Faraday","Total","auxiliary1","auxiliary2"]
-        self._logical_mode = ["RGA/SIMS","F1","F2","resolution","delta-m","mass","mode-change-delay"]
-        self._logical_others = ["F1","F2"]
-        self._logical_output = ["i/p_select","local_range","head_range","trip1","trip2","optrip","emission-LED","fault-LED","RGA/SIMS", \
-                                "emissionrange","F1","F2","beam","Faraday_range","Total_range","auxiliary1_range","auxiliary2_range", \
-                                "nul_range","resolution","delta-m","mass"]
-        self._logical_quad =  ["resolution","delta-m"]
-        self._logical_switched = ["total/partial", "multiplier", "1st-dynode"]
-        self._logical_raster = ["raster"]
-        self._logical_total_partial = ["T/P","mass"]
-        self._logical_all = ["state"]
-        self._logical_all.extend(self._logical_switched)
-        self._logical_all.extend(self._logical_output)
-        # self._logical_all.extend(self._logical_rangedev) range devices are excluded from this list
-        self._logical_all.extend(self._logical_measurement)
-        self._logical_all.extend(self._logical_raster)
+        self._release = "Release 10.11.0, 2022-11-28, 131720"
+        self._configuration = "WRD17995#cnfa.xml, 2023-03-16, 08:01, HAL10, Internal RGA 201 R10.11.0, 6d6ef24f"
+        self._logical = self.Logical()
         self._initialize_data()
 
     def _initialize_data(self):
@@ -108,7 +128,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._current_scan = None
         self._terse = False
         self._min_mass = 1
-        self._max_mass = 100
+        self._max_mass = 200
         self._mass = 4
         self._min_energy = 6
         self._max_energy = 100
@@ -160,77 +180,28 @@ class SimulatedHidenRGA(StateMachineDevice):
         return self._name
 
     @property
-    def id(self):
-        return "#" + self._name.split("#",1)[1]
-
-    @property
     def release(self):
         return self._release
         
 
     @property
+    def configuration(self):
+        return self._configuration
+        
+    @property
     def scan_table(self):
-        return self._scan_table
+        return self.logical.scan_table
         
     @property
     def logical_all(self):
-        return self._logical_all
+        return self._logical.all
         
     @property
     def logical_groups(self):
-        return self._logical_groups
-
-    @property
-    def logical_rangedev(self):
-        return self._logical_rangedev
+        return self._logical.groups
         
-    @property
-    def logical_control(self):
-        return self._logical_control
-        
-    @property
-    def logical_environment(self):
-        return self._logical_environment
-        
-    @property
-    def logical_global(self):
-        return self._logical_global
-        
-    @property
-    def logical_input(self):
-        return self._logical_input
-
-    @property
-    def logical_map(self):
-        return self._logical_map
-        
-    @property
-    def logical_measurement(self):
-        return self._logical_measurement
-        
-    @property
-    def logical_mode(self):
-        return self._logical_mode
-        
-    @property
-    def logical_others(self):
-        return self._logical_others
-        
-    @property
-    def logical_output(self):
-        return self._logical_output
-        
-    @property
-    def logical_quad(self):
-        return self._logical_quad
-        
-    @property
-    def logical_switched(self):
-        return self._logical_switched
-        
-    @property
-    def logical_total_partial(self):
-        return self._logical_total_partial
+    def logical_group(self, group):
+        return self._logical.groups[group]
         
     @property
     def terse(self):
@@ -285,7 +256,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                 return_string += "}]"
         current_scan.scan_queue.task_done()
         return return_string
-
+        
     def data(self, all=False):
         """
         Retrieves all currently queued data values.
@@ -307,6 +278,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             point += 1
             if not all and point >= self.points:
                 break
+        self.log.info("returning " + return_string)
         return return_string
 
     @property
@@ -560,7 +532,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         if current_scan not in self._scans:
             self._scans[current_scan] = Scanner()
         self._current_scan = self._scans[current_scan]
-        self._scan_thread = ScanThread(self, "scan_thread")
+        self._scan_thread = self.ScanThread(self, "scan_thread")
         for name, scan in self._scans.items():
             scan.clear_queues()
         self._scan_thread.start()
