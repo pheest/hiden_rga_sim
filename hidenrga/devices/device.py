@@ -71,33 +71,98 @@ class SimulatedHidenRGA(StateMachineDevice):
     class Logical:
         def __init__(self):
             self._groups = {}
-            self._groups["MFC"] = ["MFC1","MFC1_flow"]
             self._groups["ADAM-4017-1"] = ["ADAM-4017-1-range","ADAM-4017-1-type","input1","input2","input3","input4","input5"]
-            self._groups["rangedev"] = ["Faraday_range","Total_range","auxiliary1_range","auxiliary2_range","nul_range"]
+            self._groups["ADAM-4018-1"] = ["ADAM-4018-1-range","ADAM-4018-1-type","temperature1","temperature2","temperature3","temperature4","temperature5"]
+            self._groups["ADAM-4050-1"] = ["ADAM-4050-1-type","RI1","RI2","RI3","RI4","RI5","RI6","RI7","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8"]
+            
+            self._groups["all"] =  ["0V","F1","F1-LED","F2","F2-LED","Faraday","IO1","IO2","IO3","IO4","IO5","IO_all","IO_direction","MFC1","MFC1_flow", \
+                                    "N10V24","P3V3","P5V12","PI1","PI2","PI3","PI4","PI5","PI6","PI7","PI8","PO1","PO10","PO2","PO3","PO4","PO5","PO6","PO7","PO8","PO9", \
+                                    "RGA-SIMS","RI1","RI2","RI3","RI4","RI5","RI6","RI7","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","SEM","T-P","Total", \
+                                    "VCU1-turbo-power","VCU1-turbo-run-time","VCU1-turbo-speed","VCU1-turbo-temperature","Vacuum","auxiliary1","auxiliary2","beep", \
+                                    "cage","channel_1","channel_2","channel_3","channel_4","client-connected","clock","dac1-mon-select","dac1-monitor","dac2-mon-select","dac2-monitor", \
+                                    "delay","delta-m","display-error","display-line","electron-energy","electron-energy-DAC","emission","emission-limit","emission-range","emission-value", \
+                                    "emok","emsafe","enable","enable-PIA","enable-ext","enabled","f(%%)","f(%)","f(Pa)","f(V)","f(mbar)","f(ppm)","f(torr)","f(x)","fault-LED","filok","focus", \
+                                    "head-range","inhibit","input1","input2","input3","input4","input5","ip-select","local-range","mSecs","mass","mass-dac","mass-monitor","mass-range","mass-scale", \
+                                    "mode","mode-change-delay","monitor0","monitor1","monitor2","monitor3","multiplier","none","optrip","overtemp","process_read","protection","ptrip","random","rangedev", \
+                                    "recovery-mode","remote-io-retries","remote-io-slaves","resn-dac","resn-monitor","resolution","rfdc-monitor","run-LED","scan","scanning", \
+                                    "shutdown","shutdown-req","state","temperature1","temperature2","temperature3","temperature4","temperature5","testpoint","timer", \
+                                    "trip1","trip2","turbo-power","turbo-run-time","turbo-speed","turbo-temperature","uptime","vacuum","watchdog","watchdog-active"]            
+            self._groups["MFC"] = ["MFC"]
+            self._groups["MFC-1"] = ["MFC1","MFC1_flow"]
+            self._groups["MSC08-VCU-protocol"] = ["VCU1"]
+            self._groups["MSC10-Modbus"] = ["ADAM-4017-1","ADAM-4018-1","ADAM-4050-1","MFC-1"]
+            self._groups["MSC10-Modbus"] = ["ADAM-4017-1","ADAM-4018-1","ADAM-4050-1","MFC-1"]
+            self._groups["SEMHT"] = ["multiplier"]
+            self._groups["VCU1"] = ["VCU1-ADC-calibration","VCU1-AIM-on-point","VCU1-Aux24V-control","VCU1-assign_setpoint1","VCU1-assign_setpoint2","VCU1-assign_setpoint3", \
+                                    "VCU1-degas-gauges","VCU1-enable_setpoint1","VCU1-enable_setpoint2","VCU1-enable_setpoint3","VCU1-pressure-unit", \
+                                    "VCU1-setpoint1_high","VCU1-setpoint1_low","VCU1-setpoint2_high","VCU1-setpoint2_low","VCU1-setpoint3_high", \
+                                    "VCU1-setpoint3_low","VCU1-turbo-factory-reset","VCU1-turbo-power","VCU1-turbo-power-setting","VCU1-turbo-run-time", \
+                                    "VCU1-turbo-speed","VCU1-turbo-temperature","VCU1-turbo-type","Vacuum","turbo-power","turbo-power-setting","turbo-run-time" \
+                                    ,"turbo-speed","turbo-temperature","vacuum"]
+            self._groups["analogue-out"] = ["channel_1","channel_2","channel_3","channel_4"]
+            self._groups["beam"] = ["cage"]
+            self._groups["degas"] = ["beam","electron-energy","emission"]
+            self._groups["detector"] = ["multiplier"]
+            self._groups["enable"] = ["F1","F2","enable-PIA","shutdown","switched"]
+            self._groups["environment"] = ["MFC1","cage","channel_1","channel_2","channel_3","channel_4","delta-m","electron-energy","emission","focus","mass","mode-change-delay","resolution"]
+            self._groups["filter"] = ["focus"]
+
             self._groups["control"] = ["F1","F2"]
             self._groups["environment"] = ["resolution","delta-m","mass","mode-change-delay"]
-            self._groups["global"] = ["F1","F2","resolution","delta-m","mass","mode-change-delay"]
-            self._groups["input"] = ["inhibit","filok","emok","ptrip","IO1","IO2","IO3","IO4","IO5","Faraday","Total","auxiliary1","auxiliary2", \
-                                     "clock","mSecs","elapsed-time","watchdog"]
-            self._groups["map"] = ["mass"]
-            self._groups["measurement"] = ["SEM","Faraday","Total","auxiliary1","auxiliary2"]
-            self._groups["mode"] = ["RGA/SIMS","F1","F2","resolution","delta-m","mass","mode-change-delay"]
+            self._groups["global"] = ["F1","F2","MFC1","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","cage","channel_1","channel_2","channel_3","channel_4", \
+                                      "delta-m","electron-energy","emission","focus","mass","mode-change-delay","multiplier","resolution"]
+            self._groups["input"] = ["0V","Faraday","IO1","IO2","IO3","IO4","IO5","IO_all","MFC1_flow","N10V24","P3V3","P5V12","PI1","PI2","PI3","PI4","PI5","PI6","PI7", \
+                                     "PI8","RI1","RI2","RI3","RI4","RI5","RI6","RI7","SEM","Total","VCU1-turbo-power","VCU1-turbo-run-time","VCU1-turbo-speed", \
+                                     "VCU1-turbo-temperature","Vacuum","auxiliary1","auxiliary2","client-connected","clock","emission-limit","emok","emsafe","enabled", \
+                                     "f(%%)","f(%)","f(Pa)","f(V)","f(mbar)","f(ppm)","f(torr)","f(x)","filok","inhibit","input1","input2","input3","input4","input5", \
+                                     "mSecs","ms-count","none","overtemp","process_read","ptrip","scanning","shutdown-req","temperature1","temperature2","temperature3","temperature4","temperature5", \
+                                     "turbo-power","turbo-run-time","turbo-speed","turbo-temperature","uptime","vacuum","watchdog"]
+                                     
+            self._groups["main"] = ["F1","F2","MFC1","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","cage","channel_1","channel_2","channel_3","channel_4","delta-m", \
+                                    "electron-energy","emission","focus","mass","mode-change-delay","multiplier","resolution"]
+            self._groups["map"] = ["electron-energy","f(%%)","f(%)","f(V)","f(mbar)","f(ppm)","f(x)","focus","mass","none"]
+            self._groups["measurement"] = ["Faraday","MFC1_flow","SEM","Total","auxiliary1","auxiliary2","f(%%)","f(%)","f(V)","f(mbar)","f(ppm)","f(x)","input1","input2","input3","input4","input5", \
+                                           "none","temperature1","temperature2","temperature3","temperature4","temperature5","vacuum"]
+            self._groups["measurement"] = ["Faraday","MFC1_flow","SEM","Total","auxiliary1","auxiliary2","f(%%)","f(%)","f(V)","f(mbar)","f(ppm)","f(x)","input1","input2","input3","input4","input5", \
+                                           "none","temperature1","temperature2","temperature3","temperature4","temperature5","vacuum"]
+                                           
+            self._groups["mode"] = ["F1","F2","MFC1","RGA-SIMS","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","cage","channel_1","channel_2","channel_3","channel_4","delta-m","electron-energy","emission", \
+                                   "focus","mass","mode-change-delay","multiplier","resolution"]
+            self._groups["monitorable"] = ["0V","F1","F2","IO1","IO2","IO3","IO4","IO5","IO_all","MFC1_flow","N10V24","P3V3","P5V12","PI1","PI2","PI3","PI4","PI5","PI6","PI7","PI8", \
+                                           "RI1","RI2","RI3","RI4","RI5","RI6","RI7","VCU1-turbo-power","VCU1-turbo-run-time","VCU1-turbo-speed","VCU1-turbo-temperature", \
+                                           "Vacuum","cage","clock","delta-m","electron-energy","emission","emok","emsafe","enabled","filok","focus","inhibit", \
+                                           "input1","input2","input3","input4","input5","mSecs","mass","mode-change-delay","ms-count","multiplier","overtemp", \
+                                           "process_read","ptrip","resolution","scanning","shutdown-req","temperature1","temperature2","temperature3","temperature4","temperature5", \
+                                           "turbo-power","turbo-run-time","turbo-speed","turbo-temperature","uptime"]
             self._groups["others"] = ["F1","F2"]
-            self._groups["output"] = ["i/p_select","local_range","head_range","trip1","trip2","optrip","emission-LED","fault-LED","RGA/SIMS", \
-                                      "emissionrange","F1","F2","beam","Faraday_range","Total_range","auxiliary1_range","auxiliary2_range", \
-                                      "nul_range","resolution","delta-m","mass"]
+            self._groups["output"] = ["F1","F2","Faraday_range","IO1","IO2","IO3","IO4","IO5","IO_all","IO_direction","MFC1","PO1","PO10","PO2","PO3","PO4","PO5","PO6","PO7","PO8","PO9", \
+                                      "RGA-SIMS","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","SEM_range","Total_range","auxiliary1_range","auxiliary2_range","beep","cage", \
+                                      "channel_1","channel_2","channel_3","channel_4","delay","delta-m","electron-energy","electron-energy-DAC","emission","enable-ext","enable-leds", \
+                                      "fault-LED","focus","head-range","local-range","mass","mass-dac","mass-scale","multiplier","none_range","nul_range","optrip",
+                                      "process_write","resn-dac","resolution","rmon-en","testpoint","timer","trip1","trip2"]
             self._groups["quad"] =  ["resolution","delta-m"]
-            self._groups["switched"] = ["total/partial", "multiplier", "1st-dynode"]
-            self._groups["total-partial"] = ["T/P","mass"]
+            self._groups["rangedev"] =  ["Faraday_range","SEM_range","Total_range","auxiliary1_range","auxiliary2_range","none_range","nul_range"]
+            self._groups["remote-io-items"] =  ["ADAM-4017-1-range","ADAM-4017-1-type","ADAM-4018-1-range","ADAM-4018-1-type","ADAM-4050-1-type","MFC1","MFC1_flow", \
+                                                "RI1","RI2","RI3","RI4","RI5","RI6","RI7","RO1","RO2","RO3","RO4","RO5","RO6","RO7","RO8","VCU1-ADC-calibration", \
+                                                "VCU1-AIM-on-point","VCU1-Aux24V-control","VCU1-assign_setpoint1","VCU1-assign_setpoint2","VCU1-assign_setpoint3", \
+                                                "VCU1-degas-gauges","VCU1-enable_setpoint1","VCU1-enable_setpoint2","VCU1-enable_setpoint3","VCU1-pressure-unit", \
+                                                "VCU1-setpoint1_high","VCU1-setpoint1_low","VCU1-setpoint2_high","VCU1-setpoint2_low","VCU1-setpoint3_high","VCU1-setpoint3_low", \
+                                                "VCU1-turbo-factory-reset","VCU1-turbo-power","VCU1-turbo-power-setting","VCU1-turbo-run-time","VCU1-turbo-speed", \
+                                                "VCU1-turbo-temperature","VCU1-turbo-type","Vacuum","input1","input2","input3","input4","input5", \
+                                                "temperature1","temperature2","temperature3","temperature4","temperature5", \
+                                                "turbo-power","turbo-power-setting","turbo-run-time","turbo-speed","turbo-temperature","vacuum"]
+            self._groups["remote-io-masters"] =  ["MSC08-VCU-protocol","MSC10-Modbus"]
+            self._groups["remote-io-slaves"] =  ["ADAM-4017-1","ADAM-4018-1","ADAM-4050-1","MFC-1","VCU1"]
+            self._groups["root"] =  ["main"]
+            self._groups["shutdown"] =  ["RGA-SIMS","cage","delta-m","electron-energy","emission","focus","mode-change-delay","resolution"]
+            self._groups["source"] =  ["cage","electron-energy","emission"]
+            self._groups["test"] =  ["dac1-mon-select","dac1-monitor","dac2-mon-select","dac2-monitor","mass-dac","mass-monitor",
+                                     "monitor0","monitor1","monitor2","monitor3","resn-dac","resn-monitor","rfdc-monitor","testpoint","zm1-led1"]
+            self._groups["switched"] = ["SEMHT","total-partial"]
+            self._groups["total-partial"] = ["T-P","mass"]
             self._groups["tune-group"] = ["MFC", "detector","filter","quad","source"]
             self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
                                 "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
-            self._all = []
-            for name, group in self._groups.items():
-                for device in group:
-                    if device not in self._groups.items() and device not in self._all:
-                        self._all.append(device)
-            self._all.extend(self._scan_table)
         
         @property
         def groups(self):
@@ -105,7 +170,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             
         @property
         def all(self):
-            return self._all
+            return self._groups["all"]
             
         @property
         def scan_table(self):
@@ -133,13 +198,13 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._min_energy = 6
         self._max_energy = 100
         self._electron_energy = 70
-        self._emission = 100
+        self._emission = 0
         self._stopping = False
         self._cycles = 0
         self._interval = 0
         self._points = 70
-        self._emok = True
-        self._filok = True
+        self._emok = False
+        self._filok = False
         self._ptrip = False
         self._overtemp = False
         self._zero = False
@@ -278,7 +343,6 @@ class SimulatedHidenRGA(StateMachineDevice):
             point += 1
             if not all and point >= self.points:
                 break
-        self.log.info("returning " + return_string)
         return return_string
 
     @property
@@ -426,6 +490,26 @@ class SimulatedHidenRGA(StateMachineDevice):
     @electron_energy.setter
     def electron_energy(self, electron_energy):
         self._electron_energy = electron_energy
+        
+    @property
+    def F1(self):
+        return self._F1
+        
+    @F1.setter
+    def F1(self, F1):
+        self._F1 = (F1 == 1)
+        self._filok = self._F1 or self._F2
+        self._filok = self._filok
+        
+    @property
+    def F2(self):
+        return self._F1
+        
+    @F2.setter
+    def F2(self, F2):
+        self._F2 = F2
+        self._filok = self._F1 or self._F2
+        self._filok = self._filok
         
     @property
     def emission(self):

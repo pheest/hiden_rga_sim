@@ -40,21 +40,22 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
         CmdBuilder("set_terse").escape("pset terse ").int().build(),
-        CmdBuilder("sjob_sdel_all").escape("sjob sdel all").build(),
         CmdBuilder("lset").escape("lset ").string().int().build(),
-        CmdBuilder("sjob_lset").escape("sjob lset").string().build(),
-        CmdBuilder("sjob_quit").escape("sjob quit").build(),
-        CmdBuilder("sjob_lini").escape("sjob lini ").string().build(),
         CmdBuilder("lput1").escape("lput ").string().float().build(),
         CmdBuilder("lput2").escape("lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lput").escape("sjob lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
-        CmdBuilder("sjob_save").escape("sjob save ").string().build(),
+        CmdBuilder("sjob_sdel_all").escape("sjob sdel all").build(),
+        CmdBuilder("sjob_lset").escape("sjob lset").string().build(),
+        CmdBuilder("sjob_quit").escape("sjob quit").build(),
+        CmdBuilder("sjob_lini").escape("sjob lini ").string().build(),
+        CmdBuilder("sjob_save").escape("sjob save ").build(),
         CmdBuilder("stat_job").escape("stat ").int().build(),
         CmdBuilder("stat_task").escape("stat task ").int().build(),
         CmdBuilder("lget_device").escape("lget ").string().build(),
-        CmdBuilder("data_on").escape("data ").escape("on").build(),
-        CmdBuilder("data_all").escape("data ").escape("all").build(),
+        CmdBuilder("data_on").escape("data on").build(),
+        CmdBuilder("data_all").escape("data all").build(),
+        CmdBuilder("data_off").escape("data off").build(),
         CmdBuilder("data").escape("data").build(),
         CmdBuilder("pset_points").escape("pset points ").int().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
@@ -178,7 +179,6 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def sjob_lget(self, scan):
-        self.log.info("Starting " + scan)
         self.device.start(scan)
         return "task 1, job 1," # Task <task#>, job <job#>,
 
@@ -195,10 +195,10 @@ class HidenRGAStreamInterface(StreamInterface):
     def lput1(self, device, val0):
         #if device == "cage":
             #self.device.cage = val1
-        #if device == "F1":
-            #self.device.F1 = val1
-        #if device == "F2":
-            #self.device.F2 = val1
+        if device == "F1":
+            self.device.F1 = val1
+        if device == "F2":
+            self.device.F2 = val1
         #if device == "delta-m":
             #self.device.delta-m = val1
         if device == "electron-energy":
@@ -384,6 +384,13 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
     
     @conditional_reply("connected")
+    def data_off(self):
+        """
+        Disables data return.
+        """
+        return ""  # OK
+    
+    @conditional_reply("connected")
     def data_all(self):
         """
         Returns all of the current data string.
@@ -392,7 +399,9 @@ class HidenRGAStreamInterface(StreamInterface):
     
     @conditional_reply("connected")
     def data(self):
-        """Returns the current data string."""
+        """
+        Returns the current data string.
+        """
         return self.device.data(False)
     
     @conditional_reply("connected")
@@ -432,8 +441,15 @@ class HidenRGAStreamInterface(StreamInterface):
     
     @conditional_reply("connected")
     def lmax(self, logical_device):
+        if logical_device.isnumeric():
+            logical_index = int(logical_device)
+            logical_device = self.logical_device(logical_index)
         if logical_device == "mass":
             return self.device.max_mass
+        if logical_device == "Faraday_range":
+            return 1E-5
+        if logical_device == "emission":
+            return 5000
         if logical_device == "Faraday_range":
             return 1E-5
         return 0
@@ -465,7 +481,15 @@ class HidenRGAStreamInterface(StreamInterface):
     def ltyp(self, logical_device):
         if logical_device in self.device.logical_groups:
             return "group"
-        return self.device.logical_group(logical_device)
+        print("ltyp " + logical_device)
+        if logical_device.isnumeric():
+            logical_index = int(logical_device)
+            logical_device = self.logical_index(logical_index)
+        for logical_group in self.device.logical_groups.keys():
+            if logical_group != 'all':
+               if logical_device in self.device.logical_groups[logical_group]:
+                   return logical_group
+        return "unknown"
         
     def logical_device(self, logical_index):
         logical_device = "unknown"
