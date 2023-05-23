@@ -55,7 +55,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             self._device._stopping = False
             # Cache these values as they will be overwritten
             mass = self._device.mass
-            electron_energy = self._device.electron_energy
+            energy = self._device.energy
             start_time = time.monotonic()
             while self._device.cycles == 0 or cycle < self._device.cycles:
                 if self._device._stopping:
@@ -65,7 +65,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                     cycle += 1
             # Restore these values
             self._device.mass = mass
-            self._device.electron_energy = electron_energy
+            self._device.energy = energy
             self._device.log.info("Exiting thread")
 
     class Logical:
@@ -197,12 +197,14 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._mass = 4
         self._min_energy = 6
         self._max_energy = 100
-        self._electron_energy = 70
+        self._energy = 70
         self._emission = 0
         self._stopping = False
         self._cycles = 0
         self._interval = 0
         self._points = 70
+        self._F1 = False
+        self._F2 = False
         self._emok = False
         self._filok = False
         self._ptrip = False
@@ -255,7 +257,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         
     @property
     def scan_table(self):
-        return self.logical.scan_table
+        return self._logical.scan_table
         
     @property
     def logical_all(self):
@@ -484,12 +486,12 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._mass = mass
         
     @property
-    def electron_energy(self):
-        return self._electron_energy
+    def energy(self):
+        return self._energy
         
-    @electron_energy.setter
-    def electron_energy(self, electron_energy):
-        self._electron_energy = electron_energy
+    @energy.setter
+    def energy(self, energy):
+        self._energy = energy
         
     @property
     def F1(self):
@@ -498,18 +500,20 @@ class SimulatedHidenRGA(StateMachineDevice):
     @F1.setter
     def F1(self, F1):
         self._F1 = (F1 == 1)
-        self._filok = self._F1 or self._F2
-        self._filok = self._filok
+        if self._F1 or self._F2:
+            self._filok = True
+            self._emok = True
         
     @property
     def F2(self):
-        return self._F1
+        return self._F2
         
     @F2.setter
     def F2(self, F2):
-        self._F2 = F2
-        self._filok = self._F1 or self._F2
-        self._filok = self._filok
+        self._F2 = (F2 == 1)
+        if self._F1 or self._F2:
+            self._filok = True
+            self._emok = True
         
     @property
     def emission(self):
@@ -674,7 +678,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         scan_point = self.current_row_start + self.current_row_step * data_point
         time.sleep(self._dwell / 1000.0)
         if self.current_scan.scan_output == "energy":
-            self.electron_energy = scan_point
+            self.energy = scan_point
             
         if self.current_scan.scan_output == "mass":
             self.mass = scan_point
@@ -682,7 +686,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         signal = 0
         noise = 0
         if self.current_scan.scan_input == "SEM" or self.current_scan.scan_input == "Faraday":
-            signal = self._gasses.signal(self.mass, self.electron_energy)
+            signal = self._gasses.signal(self.mass, self.energy)
             noise = normal(-self._noise, self._noise)
             if self.current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
@@ -693,7 +697,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
             other_scan = self._scans[self.current_scan.scan_input]
             if other_scan.scan_output == "energy":
-                signal = self.electron_energy
+                signal = self.energy
             if other_scan.scan_output == "mass":
                 signal = self.mass
                 
@@ -715,7 +719,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             if self._stopping:
                 break
             if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
-                present_scan = self.current_scan  # Cache current scan reference
+                present_scan = self._current_scan  # Cache current scan reference
                 self._current_scan = self._scans[self.current_scan.scan_input]
                 self.scan(start_time)  # Recursive!
                 self._current_scan = present_scan

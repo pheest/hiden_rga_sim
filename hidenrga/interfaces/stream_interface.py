@@ -21,6 +21,7 @@ from lewis.adapters.stream import Cmd, StreamInterface
 from lewis.utils.command_builder import CmdBuilder
 from lewis.utils.replies import conditional_reply
 from lewis.core.logging import has_log
+import time
 
 
 class HidenRGAStreamInterface(StreamInterface):
@@ -40,9 +41,8 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("set_out").escape("sout").string().build(),
         CmdBuilder("set_err").escape("serr").string().build(),
         CmdBuilder("set_terse").escape("pset terse ").int().build(),
-        CmdBuilder("lset").escape("lset ").string().int().build(),
-        CmdBuilder("lput1").escape("lput ").string().float().build(),
-        CmdBuilder("lput2").escape("lput ").string().float().escape(" ").float().build(),
+        CmdBuilder("lset").escape("lset ").string().escape(" ").float().build(),
+        CmdBuilder("lput").escape("lput ").string().escape(" ").float().build(),
         CmdBuilder("sjob_lput").escape("sjob lput ").string().float().escape(" ").float().build(),
         CmdBuilder("sjob_lget").escape("sjob lget ").string().build(),
         CmdBuilder("sjob_sdel_all").escape("sjob sdel all").build(),
@@ -80,7 +80,6 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_settle").escape("sset settle ").string().build(),
         CmdBuilder("sjob_sset_mode").escape("sjob sset mode ").int().build(),
         CmdBuilder("sset_mode").escape("sset mode ").int().build(),
-        CmdBuilder("sset_mode").escape("lset mode ").int().build(),
         CmdBuilder("tdel_all").escape("tdel all").build(),
         CmdBuilder("quit").escape("quit").build(),
         CmdBuilder("sset_state_Abort").escape("sset state Abort:").build(),
@@ -152,9 +151,32 @@ class HidenRGAStreamInterface(StreamInterface):
         return "task 1, job 1," # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
-    def lset(self, device, param):
+    def lset(self, device, val):
+        self.log.info(device + " set to " + str(val))
         if device == "delay":
-           time.sleep(param)
+           time.sleep(val / 1000)
+        #if device == "cage":
+            #self.device.cage = val
+        if device == "F1":
+            self.device.F1 = round(val)
+        if device == "F2":
+            self.device.F2 = round(val)
+        #if device == "delta-m":
+            #self.device.delta-m = val
+        if device == "energy":
+            self.device.energy = val
+        if device == "emission":
+            self.device.emission = val
+        #if device = "focus":
+            #self.device.focus = val
+        if device == "mass":
+            self.device.mass = val
+        #if device = "mode-change-delay":
+            #self.device.mode-change-delay = val
+        #if device = "multiplier":
+            #self.device.multiplier = val
+        #if device = "resolution":
+            #self.device.resolution = val
         return "" # OK
         
     @conditional_reply("connected")
@@ -192,35 +214,10 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
 
     @conditional_reply("connected")
-    def lput1(self, device, val0):
-        #if device == "cage":
-            #self.device.cage = val1
-        if device == "F1":
-            self.device.F1 = val1
-        if device == "F2":
-            self.device.F2 = val1
-        #if device == "delta-m":
-            #self.device.delta-m = val1
-        if device == "electron-energy":
-            self.device.electron_energy = val0
-        if device == "emission":
-            self.device.emission = val0
-        #if device = "focus":
-            #self.device.focus = val1
-        #if device = "mass":
-            #self.device.mass = val1
-        #if device = "mode-change-delay":
-            #self.device.mode-change-delay = val1
-        #if device = "multiplier":
-            #self.device.multiplier = val1
-        #if device = "resolution":
-            #self.device.resolution = val1
+    def lput(self, device, val0, val1):
+        self.lset(device, val1)
         return ""  # OK
     
-    @conditional_reply("connected")
-    def lput2(self, device, val0, val1):
-        return self.lput1(device, val1)
-        
     @conditional_reply("connected")
     def sjob_lput(self, device, val0, val1):
         self.lput(device, val0, val1)
