@@ -1,15 +1,14 @@
 ##################################################
-##################################################
 #
-# Device simulator File
+# Device simulator file for Hiden RGA
 #
-# Simulator file for Hiden RGA
-# ITER, April 2023
 # Author : P.J. L. Heesterman (Capgemini Engineering)
 #
-# NOTES:
+# Copyright (c) : 2023 ITER Organization,
+#                 CS 90 046
+#                 13067 St. Paul-lez-Durance Cedex
+#                 France
 #
-# 
 #
 ##################################################
 from collections import OrderedDict
@@ -164,6 +163,10 @@ class SimulatedHidenRGA(StateMachineDevice):
             self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
                                 "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
         
+        class TripError(RuntimeError):
+            def __init__(self, code):
+                self._code = code
+        
         @property
         def groups(self):
             return self._groups
@@ -301,6 +304,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             if other_scan != current_scan:
                 if not other_scan.scan_queue.empty():
                     other_scan_point = other_scan.scan_queue.get()
+                    other_scan_point = other_scan.scan_queue.get()
                     if other_scan_point == other_scan.start:
                         other_scan.time_queue.get()
                         other_scan.time_queue.task_done()
@@ -312,7 +316,9 @@ class SimulatedHidenRGA(StateMachineDevice):
             return_string += str(scan_point)
             return_string += ":"
         value = current_scan.data_queue.get()
-        if (report & 1) != 0:
+        if isinstance(value, TripError):
+            return_string += "*P" + value.code + "*"
+        elif (report & 1) != 0:
             if value >= 0:
                 return_string += " "
             return_string += str(value)
@@ -700,11 +706,23 @@ class SimulatedHidenRGA(StateMachineDevice):
                 signal = self.energy
             if other_scan.scan_output == "mass":
                 signal = self.mass
-                
-        # Bit 0, return input value. NB, not neccecarily used for report.
-        self.current_scan.data_queue.put(signal + noise)
+        
+        success = False
+        if self.inhibit:
+            self.current_scan.data_queue.put(TripError(111))
+        if self.ptrip:
+            self.current_scan.data_queue.put(TripError(112))
+        elif not self.filok:
+            self.current_scan.data_queue.put(TripError(113))
+        elif not self.emok:
+            self.current_scan.data_queue.put(TripError(114))
+        else:
+            # Bit 0, return input value. NB, not neccecarily used for report.
+            self.current_scan.data_queue.put(signal + noise)
+            success = True
         # Bit 2, output value. NB, not neccecarily used for report.
         self.current_scan.scan_queue.put(scan_point)
+        return success
     
     def scan_row(self, start_time):
         """
@@ -723,10 +741,15 @@ class SimulatedHidenRGA(StateMachineDevice):
                 self._current_scan = self._scans[self.current_scan.scan_input]
                 self.scan(start_time)  # Recursive!
                 self._current_scan = present_scan
-            self.scan_value(data_point)
+            if not self.scan_value(data_point):
+                self._device.log.warn("Aborting scan due to trip")
+                return False
             data_point += 1
+        return True
             
     def scan(self, start_time):
         for self.current_row, item in enumerate(self._current_scan.rows):
-            self.scan_row(start_time)
+            if not self.scan_row(start_time):
+                return False
+        return True
 

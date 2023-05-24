@@ -1,21 +1,20 @@
-# -*- coding: utf-8 -*-
-# *********************************************************************
-# lewis - a library for creating hardware device simulators
-# Copyright (C) 2016-2021 European Spallation Source ERIC
+##################################################
 #
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
+# Stream interface file for Hiden RGA device
 #
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
+# Author : P.J. L. Heesterman (Capgemini Engineering)
 #
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <http://www.gnu.org/licenses/>.
-# *********************************************************************
+# Copyright (c) : 2023 ITER Organization,
+#                 CS 90 046
+#                 13067 St. Paul-lez-Durance Cedex
+#                 France
+#
+# This file is part of ITER CODAC software.
+# For the terms and conditions of redistribution or use of this software
+# refer to the file ITER-LICENSE.TXT located in the top level directory
+# of the distribution package.
+#
+##################################################
 
 from lewis.adapters.stream import Cmd, StreamInterface
 from lewis.utils.command_builder import CmdBuilder
@@ -253,6 +252,8 @@ class HidenRGAStreamInterface(StreamInterface):
         if devID == 'ptrip' and self.device.ptrip:
             retval = "1"
         if devID == 'overtemp' and self.device.overtemp:
+            retval = "1"
+        if devID = 'inhibit' and self.device.inhibit:
             retval = "1"
         return retval             # ( terse = 1 ) <READING>
         
@@ -580,5 +581,5 @@ class HidenRGAStreamInterface(StreamInterface):
     def handle_error(self, request, error):
         err = "An error occurred at request {}: {}".format(str(request), str(error))
         print(err)
-        self.log.info(err)
+        self.log.error(err)
         return str(err)
