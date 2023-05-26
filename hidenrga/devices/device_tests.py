@@ -22,7 +22,7 @@ class TestHidenRGASimulator(unittest.TestCase):
     def Ascan(self):
         self._simulator.start("Ascans")
         data = self._simulator.data(True)
-        self._simulator.stop(False)
+        self._simulator.stop(StopOptions.StopOptions.SCAN)
         while True:
             new_data = self._simulator.data(False)
             if new_data == "*C110*":

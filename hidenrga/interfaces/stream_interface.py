@@ -81,7 +81,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_mode").escape("sset mode ").int().build(),
         CmdBuilder("tdel_all").escape("tdel all").build(),
         CmdBuilder("quit").escape("quit").build(),
-        CmdBuilder("sset_state_Abort").escape("sset state Abort:").build(),
+        CmdBuilder("sset_state").escape("sset state ").string().build(),
         CmdBuilder("sval").escape("sval").build(),
         CmdBuilder("l999_scan").escape("l999 scan").build(),
         CmdBuilder("lmin").escape("lmin ").string().build(),
@@ -120,7 +120,7 @@ class HidenRGAStreamInterface(StreamInterface):
 
     @conditional_reply("connected")
     def sdel_all(self):
-        self.device.reset()
+        self.device.sdel_all()
         return "" #OK
         
     @conditional_reply("connected")
@@ -147,19 +147,21 @@ class HidenRGAStreamInterface(StreamInterface):
         
     @conditional_reply("connected")
     def sjob_sdel_all(self):
+        self.sdel_all()
         return "task 1, job 1," # Task <task#>, job <job#>,
         
     @conditional_reply("connected")
     def lset(self, device, val):
-        self.log.info(device + " set to " + str(val))
+        if device == 'enable':
+            self.device.enable = int(round(val))
         if device == "delay":
            time.sleep(val / 1000)
         #if device == "cage":
             #self.device.cage = val
         if device == "F1":
-            self.device.F1 = round(val)
+            self.device.F1 = int(round(val))
         if device == "F2":
-            self.device.F2 = round(val)
+            self.device.F2 = int(round(val))
         #if device == "delta-m":
             #self.device.delta-m = val
         if device == "energy":
@@ -243,17 +245,25 @@ class HidenRGAStreamInterface(StreamInterface):
         return "task "+str(task)+","+stat    # Task n,<status>,[job <job#>, <command>,]
         
     @conditional_reply("connected")
-    def lget_device(self, devID):
+    def lget_device(self, device):
         retval = "0"
-        if devID == 'emok' and self.device.emok:
+        if device == 'enable' and self.device.enable:
             retval = "1"
-        if devID == 'filok' and self.device.filok:
+        if device == 'energy':
+            retval = str(self.device.energy)
+        if device == 'emok' and self.device.emok:
             retval = "1"
-        if devID == 'ptrip' and self.device.ptrip:
+        if device == 'filok' and self.device.filok:
             retval = "1"
-        if devID == 'overtemp' and self.device.overtemp:
+        if device == 'ptrip' and self.device.ptrip:
             retval = "1"
-        if devID = 'inhibit' and self.device.inhibit:
+        if device == 'overtemp' and self.device.overtemp:
+            retval = "1"
+        if device == 'inhibit' and self.device.inhibit:
+            retval = "1"
+        if device == 'F1' and self.device.F1:
+            retval = "1"
+        if device == 'F2' and self.device.F2:
             retval = "1"
         return retval             # ( terse = 1 ) <READING>
         
@@ -412,9 +422,18 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
     
     @conditional_reply("connected")
-    def sset_state_Abort(self):
-        if self.device.stat:
-            self.device.stop()
+    def sset_state(self, state):
+        
+        if state == 'Abort:':
+            if self.device.stat:
+                self.device.stop(True)
+        if state == 'Stop:':
+            if self.device.stat:
+                self.device.stop(False)
+        if state == 'Wait:':
+            self.device.wait = True
+        if state == '':
+            self.device.wait = False
         return ""  # OK
 
     @conditional_reply("connected")

@@ -9,6 +9,10 @@
 #                 13067 St. Paul-lez-Durance Cedex
 #                 France
 #
+# This file is part of ITER CODAC software.
+# For the terms and conditions of redistribution or use of this software
+# refer to the file ITER-LICENSE.TXT located in the top level directory
+# of the distribution package.
 #
 ##################################################
 from collections import OrderedDict
@@ -20,6 +24,7 @@ import time
 import threading
 import math
 import sys
+from enum import Enum
 
 try:
     from . import gasses  # "emulator" case
@@ -39,6 +44,19 @@ class DefaultState(State):
 
 
 class SimulatedHidenRGA(StateMachineDevice):
+    class StopOptions(Enum):
+        SCAN = 0
+        STOP = 1
+        ABORT = 2
+        
+    class TripError(RuntimeError):
+        def __init__(self, code):
+            self._code = code
+        
+        @property
+        def code(self):
+            return self._code
+        
     class ScanThread(threading.Thread):
         def __init__(self, device, name):
             super().__init__()
@@ -51,15 +69,16 @@ class SimulatedHidenRGA(StateMachineDevice):
             """
             self._device.log.info("Starting thread")
             cycle = 0
-            self._device._stopping = False
+            self._device._stopping = self._device.StopOptions.SCAN
             # Cache these values as they will be overwritten
             mass = self._device.mass
             energy = self._device.energy
             start_time = time.monotonic()
             while self._device.cycles == 0 or cycle < self._device.cycles:
-                if self._device._stopping:
+                if not self._device.scan(start_time):
                     break
-                self._device.scan(start_time)
+                if self._device._stopping == self._device.StopOptions.STOP:
+                    break
                 if self._device.cycles != 0:
                     cycle += 1
             # Restore these values
@@ -163,10 +182,6 @@ class SimulatedHidenRGA(StateMachineDevice):
             self._scan_table = ["scan","row","cycles","interval","state","output","start","stop","step","input","rangedev","low", \
                                 "high","current","zero","dwell","settle","mode","report","options","return","type","env"]
         
-        class TripError(RuntimeError):
-            def __init__(self, code):
-                self._code = code
-        
         @property
         def groups(self):
             return self._groups
@@ -192,6 +207,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     def _initialize_data(self):
         self.connected = True
+        self._enable = False
         self._scans = {}
         self._current_scan = None
         self._terse = False
@@ -202,7 +218,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._max_energy = 100
         self._energy = 70
         self._emission = 0
-        self._stopping = False
+        self._stopping = self.StopOptions.SCAN
+        self._nowait = threading.Event()
+        self._nowait.set()
         self._cycles = 0
         self._interval = 0
         self._points = 70
@@ -212,6 +230,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._filok = False
         self._ptrip = False
         self._overtemp = False
+        self._inhibit = False
         self._zero = False
         self._mode = 1
         self._dwell = 100
@@ -224,8 +243,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._high = -5
         self._terse = True
 
-    def reset(self):
-        self._initialize_data()
+    def sdel_all(self):
+        self._scans = {}
         
     def _get_state_handlers(self):
         """
@@ -312,17 +331,18 @@ class SimulatedHidenRGA(StateMachineDevice):
                     print(other_scan.scan_output + " set to " + str(other_scan_point) + " at " + str(other_value))
                     other_scan.data_queue.task_done()
                     other_scan.scan_queue.task_done()
-        if (report & 4) != 0:
-            return_string += str(scan_point)
-            return_string += ":"
         value = current_scan.data_queue.get()
-        if isinstance(value, TripError):
-            return_string += "*P" + value.code + "*"
-        elif (report & 1) != 0:
-            if value >= 0:
-                return_string += " "
-            return_string += str(value)
-            return_string += ","
+        if isinstance(value, self.TripError):
+            return_string += "*P" + str(value.code) + "*"
+        else:
+            if (report & 4) != 0:
+                return_string += str(scan_point)
+                return_string += ":"
+            if (report & 1) != 0:
+                if value >= 0:
+                    return_string += " "
+                return_string += str(value)
+                return_string += ","
         current_scan.data_queue.task_done()
         if (report & 4) != 0:
             if scan_point >= current_scan.stop:
@@ -345,8 +365,6 @@ class SimulatedHidenRGA(StateMachineDevice):
             return "*C110*"     # No more data available
             
         while not current_scan.data_queue.empty():
-            if self._stopping:
-                break
             return_string += self.next_data_point(current_scan)
             point += 1
             if not all and point >= self.points:
@@ -365,9 +383,19 @@ class SimulatedHidenRGA(StateMachineDevice):
     def emok(self):
         return self._emok
 
+    @emok.setter
+    def emok(self, emok):
+        self._emok = emok
+
     @property
     def filok(self):
         return self._filok
+
+    @filok.setter
+    def filok(self, filok):
+        self._filok = filok
+        if not filok:
+            self._emok = False
 
     @property
     def ptrip(self):
@@ -376,6 +404,18 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def overtemp(self):
         return self._overtemp
+
+    @overtemp.setter
+    def overtemp(self, overtemp):
+        self._overtemp = overtemp
+
+    @property
+    def inhibit(self):
+        return self._inhibit
+
+    @inhibit.setter
+    def inhibit(self, inhibit):
+        self._inhibit = inhibit
 
     @property
     def current_scan(self):
@@ -389,7 +429,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def current_row(self):
-        if self.current_scan == None:
+        if self.current_scan is None:
             return 0
         return self._current_scan.current_row
         
@@ -399,7 +439,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def rows(self):
-        if self.current_scan == None:
+        if self.current_scan is None:
             return 0
         return self._current_scan.rows
         
@@ -498,6 +538,14 @@ class SimulatedHidenRGA(StateMachineDevice):
     @energy.setter
     def energy(self, energy):
         self._energy = energy
+        
+    @property
+    def enable(self):
+        return self._enable
+        
+    @enable.setter
+    def enable(self, enable):
+        self._enable = (enable == 1)
         
     @property
     def F1(self):
@@ -623,6 +671,11 @@ class SimulatedHidenRGA(StateMachineDevice):
         """
         Starts threaded data acquisition.
         """
+        if self._scan_thread is not None:
+            self.log.warn("Thread was still active, stopping.")
+            self._scan_thread.join()
+            self._scan_thread = None
+        
         if current_scan not in self._scans:
             self._scans[current_scan] = Scanner()
         self._current_scan = self._scans[current_scan]
@@ -637,19 +690,36 @@ class SimulatedHidenRGA(StateMachineDevice):
             return False
         return self._scan_thread.is_alive()
 
-    def stop(self, stopping=True):
+    def stop(self, stopping=StopOptions.ABORT):
         """
         Stops scanning immediately
         """
         self.log.info("Stop scanning now.")
-        self._stopping = stopping
+        if stopping:
+            self._stopping = self.StopOptions.ABORT
+        else:
+            self._stopping = self.StopOptions.STOP
+        self._nowait.set()
         if self._scan_thread is not None:
             self._scan_thread.join()
         self._scan_thread = None
+
+    @property
+    def wait(self):
+        return not self._nowait.is_set()
+        
+    @wait.setter
+    def wait(self, wait):
+        if wait:
+            self.log.info("Pause scanning at end of cycle.")
+            self._nowait.clear()
+        else:
+            self.log.info("Continue scanning at end of cycle.")
+            self._nowait.set()
         
     @property
     def current_row_start(self):
-        if self.current_scan == None:
+        if self.current_scan is None:
             return 0
         return self.current_scan.current_row_start
 
@@ -659,7 +729,7 @@ class SimulatedHidenRGA(StateMachineDevice):
     
     @property
     def current_row_stop(self):
-        if self.current_scan == None:
+        if self.current_scan is None:
             return 0
         return self.current_scan.current_row_stop
 
@@ -669,7 +739,7 @@ class SimulatedHidenRGA(StateMachineDevice):
     
     @property
     def current_row_step(self):
-        if self.current_scan == None:
+        if self.current_scan is None:
             return 0
         return self.current_scan.current_row_step
 
@@ -707,22 +777,30 @@ class SimulatedHidenRGA(StateMachineDevice):
             if other_scan.scan_output == "mass":
                 signal = self.mass
         
-        success = False
-        if self.inhibit:
-            self.current_scan.data_queue.put(TripError(111))
-        if self.ptrip:
-            self.current_scan.data_queue.put(TripError(112))
-        elif not self.filok:
-            self.current_scan.data_queue.put(TripError(113))
-        elif not self.emok:
-            self.current_scan.data_queue.put(TripError(114))
-        else:
+        TripError = None
+        if self._inhibit:
+            self.log.warn("inhibit is set")
+            TripError = self.TripError(111)
+        elif self._ptrip:
+            self.log.warn("ptrip is set")
+            TripError = self.TripError(112)
+        elif not self._filok:
+            self.log.warn("filok is not set")
+            TripError = self.TripError(113)
+        elif not self._emok:
+            self.log.warn("emok is not set")
+            TripError = self.TripError(114)
+            
+        if TripError is None:
             # Bit 0, return input value. NB, not neccecarily used for report.
             self.current_scan.data_queue.put(signal + noise)
-            success = True
+        else:
+            # Send trip error
+            self.current_scan.data_queue.put(TripError)
+        
         # Bit 2, output value. NB, not neccecarily used for report.
         self.current_scan.scan_queue.put(scan_point)
-        return success
+        return TripError is None
     
     def scan_row(self, start_time):
         """
@@ -734,15 +812,16 @@ class SimulatedHidenRGA(StateMachineDevice):
         # Bit 4, elapsed time in ms. NB, not neccecarily used for report.
         self.current_scan.time_queue.put(elapsed)
         while data_point <= data_points:
-            if self._stopping:
-                break
+            if self._stopping == self.StopOptions.ABORT:
+                self.log.warn("Scan aborted by IOC")
+                return False
             if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
                 present_scan = self._current_scan  # Cache current scan reference
                 self._current_scan = self._scans[self.current_scan.scan_input]
                 self.scan(start_time)  # Recursive!
                 self._current_scan = present_scan
             if not self.scan_value(data_point):
-                self._device.log.warn("Aborting scan due to trip")
+                self.log.warn("Aborting scan due to trip")
                 return False
             data_point += 1
         return True
@@ -751,5 +830,6 @@ class SimulatedHidenRGA(StateMachineDevice):
         for self.current_row, item in enumerate(self._current_scan.rows):
             if not self.scan_row(start_time):
                 return False
+        self._nowait.wait()
         return True
 
