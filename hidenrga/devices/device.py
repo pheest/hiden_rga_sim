@@ -313,16 +313,18 @@ class SimulatedHidenRGA(StateMachineDevice):
         scan_point = current_scan.scan_queue.get()
         report = current_scan.report
         if scan_point == current_scan.start:
-            time_point = current_scan.time_queue.get()
             return_string += "["
-            if (report & 16) != 0:
-                return_string += "/" + str(time_point) + "/"
-            current_scan.time_queue.task_done()
+        for current_row in range(0, len(current_scan.rows)):
+            if scan_point == current_scan.rows[current_row].start:
+                time_point = current_scan.time_queue.get()
+                if (report & 16) != 0:
+                    return_string += "/" + str(time_point) + "/"
+                current_scan.time_queue.task_done()
+        if scan_point == current_scan.start:
             return_string += "{"
         for name, other_scan in self._scans.items():
             if other_scan != current_scan:
                 if not other_scan.scan_queue.empty():
-                    other_scan_point = other_scan.scan_queue.get()
                     other_scan_point = other_scan.scan_queue.get()
                     if other_scan_point == other_scan.start:
                         other_scan.time_queue.get()
@@ -672,7 +674,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         Starts threaded data acquisition.
         """
         if self._scan_thread is not None:
-            self.log.warn("Thread was still active, stopping.")
+            self.log.warning("Thread was still active, stopping.")
             self._scan_thread.join()
             self._scan_thread = None
         
@@ -779,16 +781,16 @@ class SimulatedHidenRGA(StateMachineDevice):
         
         TripError = None
         if self._inhibit:
-            self.log.warn("inhibit is set")
+            self.log.warning("inhibit is set")
             TripError = self.TripError(111)
         elif self._ptrip:
-            self.log.warn("ptrip is set")
+            self.log.warning("ptrip is set")
             TripError = self.TripError(112)
         elif not self._filok:
-            self.log.warn("filok is not set")
+            self.log.warning("filok is not set")
             TripError = self.TripError(113)
         elif not self._emok:
-            self.log.warn("emok is not set")
+            self.log.warning("emok is not set")
             TripError = self.TripError(114)
             
         if TripError is None:
@@ -813,7 +815,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self.current_scan.time_queue.put(elapsed)
         while data_point <= data_points:
             if self._stopping == self.StopOptions.ABORT:
-                self.log.warn("Scan aborted by IOC")
+                self.log.warning("Scan aborted by IOC")
                 return False
             if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
                 present_scan = self._current_scan  # Cache current scan reference
@@ -821,7 +823,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                 self.scan(start_time)  # Recursive!
                 self._current_scan = present_scan
             if not self.scan_value(data_point):
-                self.log.warn("Aborting scan due to trip")
+                self.log.warning("Aborting scan due to trip")
                 return False
             data_point += 1
         return True

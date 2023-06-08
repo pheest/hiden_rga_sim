@@ -7,6 +7,7 @@ class TestHidenRGASimulator(unittest.TestCase):
 
     def setUp(self):
         self._simulator = device.SimulatedHidenRGA()
+        self._simulator.F1 = True
         self._simulator.current_gas = "H2"
         self._simulator.current_gas_pressure = 1E-7
         self._simulator.current_gas = "D2"
@@ -22,7 +23,7 @@ class TestHidenRGASimulator(unittest.TestCase):
     def Ascan(self):
         self._simulator.start("Ascans")
         data = self._simulator.data(True)
-        self._simulator.stop(StopOptions.StopOptions.SCAN)
+        self._simulator.stop(device.SimulatedHidenRGA.StopOptions.SCAN)
         while True:
             new_data = self._simulator.data(False)
             if new_data == "*C110*":
@@ -43,7 +44,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.noise = 0
         self._simulator.cycles = 2
         self._simulator.current_scan = "Ascans"
-        self._simulator.report = 21
+        # Bit 4 (timestamp) | Bit 2 (mass) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "mass"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 1.0
@@ -58,7 +60,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.electron_energy = 70
         self._simulator.cycles = 1
         self._simulator.current_scan = "Ascans"
-        self._simulator.report = 5
+        # Bit 4 (timestamp) | Bit 2 (mass) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "mass"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 0.2
@@ -81,7 +84,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.mass = 4
         self._simulator.cycles = 1
         self._simulator.current_scan = "Ascans"
-        self._simulator.report = 5
+        # Bit 4 (timestamp) | Bit 2 (energy) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "energy"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 1
@@ -96,7 +100,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.mass = 4
         self._simulator.cycles = 1
         self._simulator.current_scan = "Ascans"
-        self._simulator.report = 5
+        # Bit 4 (timestamp) | Bit 2 (energy) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "energy"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 1
@@ -122,7 +127,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.current_row_start = 20
         self._simulator.current_row_stop = 60
         self._simulator.current_scan = "Bscans"
-        self._simulator.report = 5
+        # Bit 4 (timestamp) | Bit 2 (mass) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "mass"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 1
@@ -149,7 +155,8 @@ class TestHidenRGASimulator(unittest.TestCase):
         self._simulator.current_row_start = 35
         self._simulator.current_row_stop = 45
         self._simulator.current_scan = "Bscans"
-        self._simulator.report = 5
+        # Bit 4 (timestamp) | Bit 2 (mass or energy) | Bit 0 (pressure)
+        self._simulator.report = 0b10101
         self._simulator.scan_output = "mass"
         self._simulator.current_row = 0
         self._simulator.current_row_step = 0.2
