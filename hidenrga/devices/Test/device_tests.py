@@ -1,3 +1,11 @@
+import sys
+import os
+
+# I don't understand why it's so hard to import a parent file.
+current = os.path.dirname(os.path.realpath(__file__))
+parent = os.path.dirname(current)
+sys.path.append(parent)
+
 import device
 
 import unittest
