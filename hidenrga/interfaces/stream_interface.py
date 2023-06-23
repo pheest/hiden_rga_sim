@@ -81,7 +81,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_mode").escape("sset mode ").int().build(),
         CmdBuilder("tdel_all").escape("tdel all").build(),
         CmdBuilder("quit").escape("quit").build(),
-        CmdBuilder("sset_state").escape("sset state ").string().build(),
+        CmdBuilder("sset_state").escape("sset state ").any().build(),
         CmdBuilder("sval").escape("sval").build(),
         CmdBuilder("l999_scan").escape("l999 scan").build(),
         CmdBuilder("lmin").escape("lmin ").string().build(),
@@ -422,7 +422,7 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
     
     @conditional_reply("connected")
-    def sset_state(self, state):
+    def sset_state(self, state=''):
         
         if state == 'Abort:':
             if self.device.stat:

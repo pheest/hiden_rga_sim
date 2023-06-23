@@ -559,6 +559,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self._F1 or self._F2:
             self._filok = True
             self._emok = True
+        elif self._emission > 0:
+            self._filok = False
+            self._emok = False
         
     @property
     def F2(self):
@@ -570,6 +573,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self._F1 or self._F2:
             self._filok = True
             self._emok = True
+        elif self._emission > 0:
+            self._filok = False
+            self._emok = False
         
     @property
     def emission(self):
