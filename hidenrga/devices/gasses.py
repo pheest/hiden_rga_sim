@@ -54,9 +54,9 @@ class GasSpecies:
 class Gasses:
 
     def __init__(self):
-        self._masses = []
-        self._species = []
-        self._map = {}
+        self._masses = []         # List of masses
+        self._masses_map = {}     # Dict of mass index to species name
+        self._species = {}        # Dict of species name to species
         # https://en.wikipedia.org/wiki/Ionization_energies_of_the_elements_(data_page)
         self.insert(1, GasSpecies("H", 13.59844))
         self.insert(4, GasSpecies("He", 24.58738))
@@ -77,39 +77,36 @@ class Gasses:
     def insert(self, mass, gas_species):
         index = np.searchsorted(self._masses, mass, side='right')
         self._masses.insert(index, mass)
+        if index in self._masses_map:
+            for key in range(len(self._masses_map), index, -1):
+                self._masses_map[key] = self._masses_map[key-1]
+        self._masses_map[index] = gas_species.name
         gas_species.mass = mass
-        self._species.insert(index, gas_species)
-        self._map[gas_species.name] = index
+        self._species[gas_species.name] = gas_species
 
     @property
     def species(self):
         return self._species
 
     @property
-    def map(self):
-        return self._map
+    def masses_map(self):
+        return self._masses_map
 
     def gas(self, name):
-        if name not in self._map:
+        if name not in self.species:
             return None
-        index = self._map[name]
-        return self._species[index]
+        return self._species[name]
 
     def signal(self, mass, electron_energy):
         signal_value = 0
         index_left = np.searchsorted(self._masses, mass, side='left')
-        if index_left >= len(self._species):
-            index_left -= 1
-        while index_left > 0 and self._species[index_left].mass >= mass-1:
-            index_left -= 1
         index_right = np.searchsorted(self._masses, mass, side='right')
-        if index_right >= len(self._species):
-            index_right -= 1
-        while index_right < len(self._species)-1 and self._species[index_right].mass <= mass+1:
-            index_right += 1
+        if index_right >= len(self._masses_map):
+            index_right = len(self._masses_map)-1
         index = index_left
         while index <= index_right:
-            signal_value += self._species[index].signal(mass, electron_energy)
+            species_name = self._masses_map[index]
+            signal_value += self._species[species_name].signal(mass, electron_energy)
             index += 1
         return signal_value
 
@@ -121,18 +118,20 @@ class Gasses:
 if __name__ == "__main__":
     """ For debugging purpose only """
     gasses = Gasses()
-    pprint.pprint(gasses.map)
-    for species in gasses.species:
-        print(species.name, species.ionisation_energy, species.ionisation_efficiency(1070))
+    pprint.pprint(gasses.masses_map)
+    for name in gasses.species:
+        species = gasses.species[name]
+        print(name, species.mass, species.ionisation_energy, species.ionisation_efficiency(70))
     pprint.pprint(gasses.masses)
 
-    D2 = GasSpecies("D2", 15.46658)
+    D2 = gasses.gas("D2")
     D2.partial_pressure = 1E-8
-    D2.mass = 4
 
-    He = GasSpecies("He", 24.58738)
+    He = gasses.gas("He")
     He.partial_pressure = 1E-8
-    He.mass = 4
+
+    for mass in range(1, 50):
+        print(mass, ",", gasses.signal(mass, 70))
 
     for ee in range(15, 40):
         print(ee, ",", D2.signal(D2.mass, ee), ",", He.signal(He.mass, ee))

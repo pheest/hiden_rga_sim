@@ -67,20 +67,24 @@ class SimulatedHidenRGA(StateMachineDevice):
             """ 
             Thread method to aquire data
             """
-            self._device.log.info("Starting thread")
-            cycle = 0
-            self._device._stopping = self._device.StopOptions.SCAN
-            # Cache these values as they will be overwritten
-            mass = self._device.mass
-            energy = self._device.energy
-            start_time = time.monotonic()
-            while self._device.cycles == 0 or cycle < self._device.cycles:
-                if not self._device.scan(start_time):
-                    break
-                if self._device._stopping == self._device.StopOptions.STOP:
-                    break
-                if self._device.cycles != 0:
-                    cycle += 1
+            try:
+                self._device.log.info("Starting thread")
+                cycle = 0
+                self._device._stopping = self._device.StopOptions.SCAN
+                # Cache these values as they will be overwritten
+                mass = self._device.mass
+                energy = self._device.energy
+                start_time = time.monotonic()
+                while self._device.cycles == 0 or cycle < self._device.cycles:
+                    if not self._device.scan(start_time):
+                        break
+                    if self._device._stopping == self._device.StopOptions.STOP:
+                        break
+                    if self._device.cycles != 0:
+                        cycle += 1
+            except Exception as Error:
+                self._device.log.error(str(Error))
+                
             # Restore these values
             self._device.mass = mass
             self._device.energy = energy
@@ -670,6 +674,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             self._emission = 0
             self._scan_input = "Faraday"
         self._gasses.gas(self._current_gas).partial_pressure = partial_pressure
+        self.log.info(str(self._current_gas) + " pressure set to " + str(self._gasses.gas(self._current_gas).partial_pressure))
         
     @property
     def total_pressure(self):
@@ -815,11 +820,21 @@ class SimulatedHidenRGA(StateMachineDevice):
         Scans the current row.
         """
         data_point = 0
-        data_points = round((self.current_row_stop - self.current_row_start) / self.current_row_step)
+        
+        value_tolerance = sys.float_info.epsilon * (1 + self.current_row_stop)
+        
+        current_row_length = self.current_row_stop - self.current_row_start
+        
+        if abs(current_row_length) < value_tolerance:
+            data_points = 1
+            self.log.debug("Zero row length, setting 1 point with " + str(self.current_row_step) + " step")
+        else:
+            data_points = int(0.5 + float(current_row_length) / self.current_row_step)
+            self.log.debug("Finite row length, setting " + str(data_points) + " points")
         elapsed = int((time.monotonic() - start_time) * 1000.0)
         # Bit 4, elapsed time in ms. NB, not neccecarily used for report.
         self.current_scan.time_queue.put(elapsed)
-        while data_point <= data_points:
+        while data_point < data_points:
             if self._stopping == self.StopOptions.ABORT:
                 self.log.warning("Scan aborted by IOC")
                 return False
