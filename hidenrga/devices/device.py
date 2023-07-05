@@ -249,6 +249,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     def sdel_all(self):
         self._scans = {}
+        self._current_scan = None
         
     def _get_state_handlers(self):
         """
