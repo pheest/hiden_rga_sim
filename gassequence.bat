@@ -2,6 +2,9 @@
 C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas H2
 C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas_pressure 1E-7
 
+C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas D2
+C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas_pressure 4E-7
+
 C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas H2O
 C:\Python310\scripts\lewis-control.exe -r 10.1.1.9:10000 device current_gas_pressure 2E-7
 
