@@ -251,16 +251,28 @@ class HidenRGAStreamInterface(StreamInterface):
             retval = "1"
         if device == 'energy':
             retval = str(self.device.energy)
-        if device == 'emok' and self.device.emok:
-            retval = "1"
-        if device == 'filok' and self.device.filok:
-            retval = "1"
-        if device == 'ptrip' and self.device.ptrip:
-            retval = "1"
-        if device == 'overtemp' and self.device.overtemp:
-            retval = "1"
-        if device == 'inhibit' and self.device.inhibit:
-            retval = "1"
+        if device == 'emok':
+            if self.device.emok:
+                retval = "1"
+            elif self.device.F1 or self.device.F2:
+                self.log.warning("Emission is not OK")
+        if device == 'filok':
+            if self.device.filok:
+                retval = "1"
+            elif self.device.F1 or self.device.F2:
+                self.log.warning("Filament is not OK")
+        if device == 'ptrip':
+            if self.device.ptrip:
+                retval = "1"
+                self.log.warning("Presuure is tripped")
+        if device == 'overtemp':
+            if self.device.overtemp:
+                retval = "1"
+                self.log.warning("Over temperature")
+        if device == 'inhibit':
+            if self.device.inhibit:
+                retval = "1"
+                self.log.warning("Inhibited")
         if device == 'F1' and self.device.F1:
             retval = "1"
         if device == 'F2' and self.device.F2:
@@ -478,7 +490,7 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def lid_hash(self, logical_device):
         if logical_device not in self.device.logical_all:
-            self.log.warn("device not found")
+            self.log.warning("device not found")
             return 0
         return self.device.logical_all.index(logical_device)
     

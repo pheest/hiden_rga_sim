@@ -669,13 +669,19 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self._current_gas is None:
             self.log.error("No gas selected.")
             return
-        self._total_pressure += partial_pressure - self.current_gas_pressure
-        if self._total_pressure > 1E-4:
+            
+        self._total_pressure += partial_pressure - self._gasses.gas(self._current_gas).partial_pressure
+        if self._total_pressure > 1E-2: # NB, Pascal units
+            self.log.warning("Total pressure caused trip at " + str(self._total_pressure))
             self._ptrip = True
             self._emission = 0
             self._scan_input = "Faraday"
+        elif self._ptrip:
+            self.log.info("Pressure trip cleared with " + str(self._total_pressure))
+            self._ptrip = False
+        
         self._gasses.gas(self._current_gas).partial_pressure = partial_pressure
-        self.log.info(str(self._current_gas) + " pressure set to " + str(self._gasses.gas(self._current_gas).partial_pressure))
+        self.log.info(str(self._current_gas) + " pressure set to " + str(self._gasses.gas(self._current_gas).partial_pressure) + " total now " + str(self._total_pressure))
         
     @property
     def total_pressure(self):
@@ -776,7 +782,11 @@ class SimulatedHidenRGA(StateMachineDevice):
         signal = 0
         noise = 0
         if self.current_scan.scan_input == "SEM" or self.current_scan.scan_input == "Faraday":
+            pascal_to_torr = 0.00750062
             signal = self._gasses.signal(self.mass, self.energy)
+            # NB, The Hiden device uses Torr as the output unit.
+            # But this project uses Pascal (the SI unit) as the unit wherever possible.
+            signal *= pascal_to_torr
             noise = normal(-self._noise, self._noise)
             if self.current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
@@ -804,6 +814,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         elif not self._emok:
             self.log.warning("emok is not set")
             TripError = self.TripError(114)
+        elif self._overtemp:
+            self.log.warning("overtemp is set")
+            TripError = self.TripError(115)
             
         if TripError is None:
             # Bit 0, return input value. NB, not neccecarily used for report.
@@ -828,7 +841,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         
         if abs(current_row_length) < value_tolerance:
             data_points = 1
-            self.log.debug("Zero row length, setting 1 point with " + str(self.current_row_step) + " step")
+            self.log.info("Zero row length, setting 1 point with " + str(self.current_row_step) + " step")
         else:
             data_points = int(0.5 + float(current_row_length) / self.current_row_step)
             self.log.debug("Finite row length, setting " + str(data_points) + " points")
@@ -836,6 +849,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         # Bit 4, elapsed time in ms. NB, not neccecarily used for report.
         self.current_scan.time_queue.put(elapsed)
         while data_point < data_points:
+            if data_points == 1:
+                self.log.info("Data point")            
             if self._stopping == self.StopOptions.ABORT:
                 self.log.warning("Scan aborted by IOC")
                 return False

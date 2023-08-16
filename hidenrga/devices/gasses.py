@@ -125,10 +125,10 @@ if __name__ == "__main__":
     pprint.pprint(gasses.masses)
 
     D2 = gasses.gas("D2")
-    D2.partial_pressure = 1E-8
+    D2.partial_pressure = 1E-6  # NB, Pascal units
 
     He = gasses.gas("He")
-    He.partial_pressure = 1E-8
+    He.partial_pressure = 1E-6  # NB, Pascal units
 
     for mass in range(1, 50):
         print(mass, ",", gasses.signal(mass, 70))
