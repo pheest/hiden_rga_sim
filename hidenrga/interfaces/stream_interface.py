@@ -14,6 +14,8 @@
 # refer to the file ITER-LICENSE.TXT located in the top level directory
 # of the distribution package.
 #
+# This file is part implemenation of RGA-SDM-01 "Hardware simulator"
+#
 ##################################################
 
 from lewis.adapters.stream import Cmd, StreamInterface
