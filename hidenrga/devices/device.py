@@ -390,6 +390,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def emok(self):
+        self.join(0)
         return self._emok
 
     @emok.setter
@@ -398,6 +399,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def filok(self):
+        self.join(0)
         return self._filok
 
     @filok.setter
@@ -408,10 +410,12 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def ptrip(self):
+        self.join(0)
         return self._ptrip
 
     @property
     def overtemp(self):
+        self.join(0)
         return self._overtemp
 
     @overtemp.setter
@@ -420,6 +424,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def inhibit(self):
+        self.join(0)
         return self._inhibit
 
     @inhibit.setter
@@ -688,6 +693,13 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def total_pressure(self):
         return self._total_pressure
+        
+    def join(self, timeout):
+        if self._scan_thread is not None:
+            self._scan_thread.join(timeout)
+            if not self._scan_thread.is_alive():
+                self.log.info("Thread has exitied.")
+                self._scan_thread = None
 
     def start(self, current_scan):
         """
@@ -695,7 +707,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         """
         if self._scan_thread is not None:
             self.log.warning("Thread was still active, stopping.")
-            self._scan_thread.join()
+            self._scan_thread.join(None)
             self._scan_thread = None
         
         if current_scan not in self._scans:
@@ -722,9 +734,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         else:
             self._stopping = self.StopOptions.STOP
         self._nowait.set()
-        if self._scan_thread is not None:
-            self._scan_thread.join()
-        self._scan_thread = None
+        self.join(1.0)
 
     @property
     def wait(self):
