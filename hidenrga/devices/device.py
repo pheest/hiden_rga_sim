@@ -58,7 +58,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         @property
         def code(self):
             return self._code
-        
+            
     class ScanThread(threading.Thread):
         def __init__(self, device, name):
             super().__init__()
@@ -211,6 +211,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._logical = self.Logical()
         self._initialize_data()
 
+    def __del__(self):
+        self.join(None)
+        
     def _initialize_data(self):
         self.connected = True
         self._enable = False
@@ -729,12 +732,14 @@ class SimulatedHidenRGA(StateMachineDevice):
         Stops scanning immediately
         """
         self.log.info("Stop scanning now.")
+        timeout = None
         if stopping:
             self._stopping = self.StopOptions.ABORT
         else:
             self._stopping = self.StopOptions.STOP
+            timeout = 0
         self._nowait.set()
-        self.join(1.0)
+        self.join(timeout)
 
     @property
     def wait(self):
