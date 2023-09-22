@@ -54,10 +54,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("stat_job").escape("stat ").int().build(),
         CmdBuilder("stat_task").escape("stat task ").int().build(),
         CmdBuilder("lget_device").escape("lget ").string().build(),
-        CmdBuilder("data_on").escape("data on").build(),
-        CmdBuilder("data_all").escape("data all").build(),
-        CmdBuilder("data_off").escape("data off").build(),
-        CmdBuilder("data").escape("data").build(),
+        CmdBuilder("data").escape("data").any().build(),
         CmdBuilder("pset_points").escape("pset points ").int().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
         CmdBuilder("sset_scan").escape("sset scan ").string().build(),
@@ -399,31 +396,17 @@ class HidenRGAStreamInterface(StreamInterface):
         return "task 1, job 1," # Task <task#>, job <job#>,
        
     @conditional_reply("connected")
-    def data_on(self):
-        """
-        Enables data return.
-        """
-        return ""  # OK
-    
-    @conditional_reply("connected")
-    def data_off(self):
-        """
-        Disables data return.
-        """
-        return ""  # OK
-    
-    @conditional_reply("connected")
-    def data_all(self):
-        """
-        Returns all of the current data string.
-        """
-        return self.device.data(True)
-    
-    @conditional_reply("connected")
-    def data(self):
+    def data(self, on_off_all=''):
         """
         Returns the current data string.
         """
+        on_off_all = on_off_all.strip()
+        if on_off_all=='on':
+            return ""  # OK
+        elif on_off_all=='off':
+            return ""  # OK
+        elif on_off_all=='all':
+            return self.device.data(True)
         return self.device.data(False)
     
     @conditional_reply("connected")
