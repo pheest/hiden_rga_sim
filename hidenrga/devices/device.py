@@ -243,6 +243,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._zero = False
         self._mode = 1
         self._dwell = 100
+        self._wake = threading.Event()
         self._dwellmode = True
         self._settle = 100
         self._settlemode = True
@@ -727,14 +728,16 @@ class SimulatedHidenRGA(StateMachineDevice):
             return False
         return self._scan_thread.is_alive()
 
-    def stop(self, stopping=StopOptions.ABORT):
+    def stop(self, abort):
         """
         Stops scanning immediately
         """
         self.log.info("Stop scanning now.")
         timeout = None
-        if stopping:
+        if abort:
+            # Causes immediate stop, so wake used.
             self._stopping = self.StopOptions.ABORT
+            self._wake.set()
         else:
             self._stopping = self.StopOptions.STOP
             timeout = 0
@@ -789,7 +792,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         Acquires one data sample.
         """
         scan_point = self.current_row_start + self.current_row_step * data_point
-        time.sleep(self._dwell / 1000.0)
+        if self._wake.wait(self._dwell / 1000.0):
+            self._wake.clear()
         if self.current_scan.scan_output == "energy":
             self.energy = scan_point
             
