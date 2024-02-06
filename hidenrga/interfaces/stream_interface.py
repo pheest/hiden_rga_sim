@@ -58,6 +58,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("pset_points").escape("pset points ").int().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
         CmdBuilder("sset_scan").escape("sset scan ").string().build(),
+        CmdBuilder("sget").escape("sget ").string().build(),
         CmdBuilder("lini_scan").escape("lini ").string().build(),
         CmdBuilder("sset_row").escape("sset row ").int().build(),
         CmdBuilder("sset_output").escape("sset output ").string().build(),
@@ -328,6 +329,16 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def sset_input(self, input):
         self.device.scan_input = input
+        return ""  # OK
+        
+    @conditional_reply("connected")
+    def sget(self, name):
+        if name == 'low':
+            return self.device.low
+        if name == 'high':
+            return self.device.high
+        if name == 'current':
+            return self.device.current
         return ""  # OK
         
     @conditional_reply("connected")

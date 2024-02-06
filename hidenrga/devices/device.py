@@ -251,6 +251,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._total_pressure = 0
         self._low = -12
         self._high = -5
+        self._current = -7
+        #self._range_units = 'Torr'
+        self._range_units = 'Amps'
         self._terse = True
 
     def sdel_all(self):
@@ -534,6 +537,24 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._high = high
 
     @property
+    def current(self):
+        if not self._terse:
+            return 'x10E' + str(self._current) + self._range_units
+        return self._current
+
+    @current.setter
+    def current(self, current):
+        self._current = current
+       
+    @property
+    def range_units(self):
+        return self._range_units
+        
+    @range_units.setter
+    def range_units(self, range_units):
+        self._range_units = range_units
+
+    @property
     def zero(self):
         return self._zero
 
@@ -807,7 +828,8 @@ class SimulatedHidenRGA(StateMachineDevice):
             signal = self._gasses.signal(self.mass, self.energy)
             # NB, The Hiden device uses Torr as the output unit.
             # But this project uses Pascal (the SI unit) as the unit wherever possible.
-            signal *= pascal_to_torr
+            if self.range_units == 'Torr':
+                signal *= pascal_to_torr
             noise = normal(-self._noise, self._noise)
             if self.current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
@@ -858,7 +880,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         
         value_tolerance = sys.float_info.epsilon * (1 + self.current_row_stop)
         
-        current_row_length = self.current_row_stop - self.current_row_start
+        # Row current_row_stop is set as the last point, but does not include the last step
+        current_row_length = self.current_row_stop + self.current_row_step - self.current_row_start
         
         if abs(current_row_length) < value_tolerance:
             data_points = 1
