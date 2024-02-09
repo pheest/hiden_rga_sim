@@ -75,7 +75,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                 self._device._stopping = self._device.StopOptions.SCAN
                 # Cache these values as they will be overwritten
                 mass = self._device.mass
-                energy = self._device.energy
+                electron_energy = self._device.electron_energy
                 start_time = time.monotonic()
                 while self._device.cycles == 0 or cycle < self._device.cycles:
                     if not self._device.scan(start_time):
@@ -89,7 +89,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                 
             # Restore these values
             self._device.mass = mass
-            self._device.energy = energy
+            self._device.electron_energy = electron_energy
             self._device.log.info("Exiting thread")
 
     class Logical:
@@ -223,20 +223,20 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._min_mass = 1
         self._max_mass = 200
         self._mass = 4
-        self._min_energy = 6
-        self._max_energy = 100
-        self._energy = 70
+        self._min_electron_energy = 6
+        self._max_electron_energy = 100
+        self._electron_energy = 70
         self._emission = 0
         self._stopping = self.StopOptions.SCAN
         self._nowait = threading.Event()
         self._nowait.set()
-        self._cycles = 0
+        self._cycles = 1
         self._interval = 0
         self._points = 70
         self._F1 = False
         self._F2 = False
         self._emok = False
-        self._filok = False
+        self._filok = True
         self._ptrip = False
         self._overtemp = False
         self._inhibit = False
@@ -363,6 +363,9 @@ class SimulatedHidenRGA(StateMachineDevice):
         if (report & 4) != 0:
             if scan_point >= current_scan.stop:
                 return_string += "}]"
+                if self._scan_thread is None:
+                    return_string += "!"
+        
         current_scan.scan_queue.task_done()
         return return_string
         
@@ -385,6 +388,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             point += 1
             if not all and point >= self.points:
                 break
+        self.log.debug("return_string " + return_string)
         return return_string
 
     @property
@@ -571,12 +575,12 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._mass = mass
         
     @property
-    def energy(self):
-        return self._energy
+    def electron_energy(self):
+        return self._electron_energy
         
-    @energy.setter
-    def energy(self, energy):
-        self._energy = energy
+    @electron_energy.setter
+    def electron_energy(self, electron_energy):
+        self._electron_energy = electron_energy
         
     @property
     def enable(self):
@@ -594,10 +598,8 @@ class SimulatedHidenRGA(StateMachineDevice):
     def F1(self, F1):
         self._F1 = (F1 == 1)
         if self._F1 or self._F2:
-            self._filok = True
             self._emok = True
         elif self._emission > 0:
-            self._filok = False
             self._emok = False
         
     @property
@@ -608,10 +610,8 @@ class SimulatedHidenRGA(StateMachineDevice):
     def F2(self, F2):
         self._F2 = (F2 == 1)
         if self._F1 or self._F2:
-            self._filok = True
             self._emok = True
         elif self._emission > 0:
-            self._filok = False
             self._emok = False
         
     @property
@@ -815,8 +815,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         scan_point = self.current_row_start + self.current_row_step * data_point
         if self._wake.wait(self._dwell / 1000.0):
             self._wake.clear()
-        if self.current_scan.scan_output == "energy":
-            self.energy = scan_point
+        if self.current_scan.scan_output == "electron-energy":
+            self.electron_energy = scan_point
             
         if self.current_scan.scan_output == "mass":
             self.mass = scan_point
@@ -825,12 +825,17 @@ class SimulatedHidenRGA(StateMachineDevice):
         noise = 0
         if self.current_scan.scan_input == "SEM" or self.current_scan.scan_input == "Faraday":
             pascal_to_torr = 0.00750062
-            signal = self._gasses.signal(self.mass, self.energy)
+            pascal_to_amps = 1E-5
+            signal = self._gasses.signal(self.mass, self.electron_energy)
             # NB, The Hiden device uses Torr as the output unit.
             # But this project uses Pascal (the SI unit) as the unit wherever possible.
             if self.range_units == 'Torr':
                 signal *= pascal_to_torr
+            if self.range_units == 'Amps':
+                signal *= pascal_to_amps
             noise = normal(-self._noise, self._noise)
+            if self.range_units == 'Amps':
+                noise = noise * pascal_to_amps
             if self.current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
                 noise /= 1000
@@ -839,8 +844,8 @@ class SimulatedHidenRGA(StateMachineDevice):
 
         if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
             other_scan = self._scans[self.current_scan.scan_input]
-            if other_scan.scan_output == "energy":
-                signal = self.energy
+            if other_scan.scan_output == "electron-energy":
+                signal = self.electron_energy
             if other_scan.scan_output == "mass":
                 signal = self.mass
         
@@ -888,13 +893,13 @@ class SimulatedHidenRGA(StateMachineDevice):
             self.log.info("Zero row length, setting 1 point with " + str(self.current_row_step) + " step")
         else:
             data_points = int(0.5 + float(current_row_length) / self.current_row_step)
-            self.log.debug("Finite row length, setting " + str(data_points) + " points")
+            self.log.info("Finite row length, setting " + str(data_points) + " points")
         elapsed = int((time.monotonic() - start_time) * 1000.0)
         # Bit 4, elapsed time in ms. NB, not neccecarily used for report.
         self.current_scan.time_queue.put(elapsed)
         while data_point < data_points:
             if data_points == 1:
-                self.log.info("Data point")            
+                self.log.info("Data point")
             if self._stopping == self.StopOptions.ABORT:
                 self.log.warning("Scan aborted by IOC")
                 return False

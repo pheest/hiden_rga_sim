@@ -164,8 +164,8 @@ class HidenRGAStreamInterface(StreamInterface):
             self.device.F2 = int(round(val))
         #if device == "delta-m":
             #self.device.delta-m = val
-        if device == "energy":
-            self.device.energy = val
+        if device == "electron-energy":
+            self.device.electron_energy = val
         if device == "emission":
             self.device.emission = val
         #if device = "focus":
@@ -249,8 +249,8 @@ class HidenRGAStreamInterface(StreamInterface):
         retval = "0"
         if device == 'enable' and self.device.enable:
             retval = "1"
-        if device == 'energy':
-            retval = str(self.device.energy)
+        if device == 'electron-energy':
+            retval = str(self.device.electron_energy)
         if device == 'emok':
             if self.device.emok:
                 retval = "1"
