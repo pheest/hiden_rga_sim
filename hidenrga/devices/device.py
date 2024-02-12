@@ -599,8 +599,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._F1 = (F1 == 1)
         if self._F1 or self._F2:
             self._emok = True
-        elif self._emission > 0:
-            self._emok = False
+        else:
+            self._emok = self._emission == 0
         
     @property
     def F2(self):
@@ -611,8 +611,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._F2 = (F2 == 1)
         if self._F1 or self._F2:
             self._emok = True
-        elif self._emission > 0:
-            self._emok = False
+        else:
+            self._emok = self._emission == 0
         
     @property
     def emission(self):
@@ -832,7 +832,7 @@ class SimulatedHidenRGA(StateMachineDevice):
             if self.range_units == 'Torr':
                 signal *= pascal_to_torr
             if self.range_units == 'Amps':
-                signal *= pascal_to_amps
+                signal *= pascal_to_amps * self.emission / 500
             noise = normal(-self._noise, self._noise)
             if self.range_units == 'Amps':
                 noise = noise * pascal_to_amps
