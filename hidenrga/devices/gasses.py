@@ -98,17 +98,20 @@ class Gasses:
         return self._species[name]
 
     def signal(self, mass, electron_energy):
-        signal_value = 0
-        index_left = np.searchsorted(self._masses, mass, side='left')
-        index_right = np.searchsorted(self._masses, mass, side='right')
+        total_signal = 0
+        index_left = np.searchsorted(self._masses, mass-0.75, side='left')
+        index_right = np.searchsorted(self._masses, mass+0.75, side='right')
+        # [1, 2, 4, 4, 14, 16, 18, 18, 19, 28, 28, 32, 38, 44]
         if index_right >= len(self._masses_map):
             index_right = len(self._masses_map)-1
+            
         index = index_left
         while index <= index_right:
             species_name = self._masses_map[index]
-            signal_value += self._species[species_name].signal(mass, electron_energy)
+            signal_value = self._species[species_name].signal(mass, electron_energy)
+            total_signal += signal_value
             index += 1
-        return signal_value
+        return total_signal
 
     @property
     def masses(self):
@@ -128,10 +131,13 @@ if __name__ == "__main__":
     D2.partial_pressure = 1E-6  # NB, Pascal units
 
     He = gasses.gas("He")
-    He.partial_pressure = 1E-6  # NB, Pascal units
+    He.partial_pressure = 2E-6  # NB, Pascal units
 
-    for mass in range(1, 50):
-        print(mass, ",", gasses.signal(mass, 70))
+    H2O = gasses.gas("H2O")
+    H2O.partial_pressure = 3E-6  # NB, Pascal units
+
+    for mass in np.arange(17.0, 19.0, 0.1):
+        print("mass " + str(mass) + " signal " + str(gasses.signal(mass, 70)))
 
     for ee in range(15, 40):
-        print(ee, ",", D2.signal(D2.mass, ee), ",", He.signal(He.mass, ee))
+        print("energy " + str(ee) + " D2 signal " + str(D2.signal(D2.mass, ee)) + " He signal " + str(He.signal(He.mass, ee)))

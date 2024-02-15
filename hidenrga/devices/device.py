@@ -247,7 +247,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._dwellmode = True
         self._settle = 100
         self._settlemode = True
-        self._noise = 1E-9
+        self._noise = 1E-12  # In Amps
         self._total_pressure = 0
         self._low = -12
         self._high = -5
@@ -834,8 +834,8 @@ class SimulatedHidenRGA(StateMachineDevice):
             if self.range_units == 'Amps':
                 signal *= pascal_to_amps * self.emission / 500
             noise = normal(-self._noise, self._noise)
-            if self.range_units == 'Amps':
-                noise = noise * pascal_to_amps
+            if self.range_units != 'Amps':
+                noise = noise / pascal_to_amps
             if self.current_scan.scan_input == "SEM":
                 # Lower noise in SEM mode.
                 noise /= 1000
