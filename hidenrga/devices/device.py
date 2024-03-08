@@ -254,6 +254,8 @@ class SimulatedHidenRGA(StateMachineDevice):
         self._current = -7
         #self._range_units = 'Torr'
         self._range_units = 'Amps'
+        self._align = False
+        self._masstable = "0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"
         self._terse = True
 
     def sdel_all(self):
@@ -313,7 +315,24 @@ class SimulatedHidenRGA(StateMachineDevice):
     @terse.setter
     def terse(self, terse):
         self._terse = terse
-        
+    
+    @property
+    def align(self):
+        return self._align
+
+    @align.setter
+    def align(self, align):
+        self.log.info("Setting align to " + str(align))
+        self._align = align
+
+    @property
+    def masstable(self):
+        return self._masstable
+
+    @masstable.setter
+    def masstable(self, masstable):
+        self._masstable = masstable
+
     @property
     def data_queue(self):
         return self.current_scan.data_queue
@@ -363,8 +382,13 @@ class SimulatedHidenRGA(StateMachineDevice):
         if (report & 4) != 0:
             if scan_point >= current_scan.stop:
                 return_string += "}]"
+                if self._scan_thread is not None:
+                    self._scan_thread.join(0)
                 if self._scan_thread is None:
                     return_string += "!"
+                if self.align:
+                    self.masstable = '0 0 20000 64000 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0'
+                    self.log.info("MassTable updated to " + self.masstable)
         
         current_scan.scan_queue.task_done()
         return return_string
@@ -401,7 +425,6 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def emok(self):
-        self.join(0)
         return self._emok
 
     @emok.setter
@@ -410,7 +433,6 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def filok(self):
-        self.join(0)
         return self._filok
 
     @filok.setter
@@ -421,12 +443,10 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def ptrip(self):
-        self.join(0)
         return self._ptrip
 
     @property
     def overtemp(self):
-        self.join(0)
         return self._overtemp
 
     @overtemp.setter
@@ -435,7 +455,6 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     @property
     def inhibit(self):
-        self.join(0)
         return self._inhibit
 
     @inhibit.setter
@@ -751,7 +770,7 @@ class SimulatedHidenRGA(StateMachineDevice):
 
     def stop(self, abort):
         """
-        Stops scanning immediately
+        Stops scanning immediately or at the end of scan
         """
         self.log.info("Stop scanning now.")
         timeout = None
@@ -920,4 +939,3 @@ class SimulatedHidenRGA(StateMachineDevice):
                 return False
         self._nowait.wait()
         return True
-

@@ -56,6 +56,8 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("lget_device").escape("lget ").string().build(),
         CmdBuilder("data").escape("data").any().build(),
         CmdBuilder("pset_points").escape("pset points ").int().build(),
+        CmdBuilder("pget_masstable").escape("pget masstable").build(),
+        CmdBuilder("pset_masstable").escape("pset masstable").string().build(),
         CmdBuilder("stop").escape("stop ").string().build(),
         CmdBuilder("sset_scan").escape("sset scan ").string().build(),
         CmdBuilder("sget").escape("sget ").string().build(),
@@ -75,6 +77,7 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("sset_zero").escape("sset zero ").int().build(),
         CmdBuilder("sset_options").escape("sset options ").string().build(),
         CmdBuilder("sset_report").escape("sset report ").int().build(),
+        CmdBuilder("sset_return").escape("sset return ").string().build(),
         CmdBuilder("sset_dwell").escape("sset dwell ").string().build(),
         CmdBuilder("sset_settle").escape("sset settle ").string().build(),
         CmdBuilder("sjob_sset_mode").escape("sjob sset mode ").int().build(),
@@ -232,7 +235,7 @@ class HidenRGAStreamInterface(StreamInterface):
         stat = "idle"
         if self.device.stat:
             stat = "running"
-        return "task "+str(job)+","+stat    # Task n,<status>,[job <job#>, <command>,]
+        return "task " + str(job) + "," + stat    # Task n,<status>,[job <job#>, <command>,]
         
     @conditional_reply("connected")
     def stat_task(self, task):
@@ -372,6 +375,14 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
     
     @conditional_reply("connected")
+    def sset_return(self, _return):
+        if _return == 'Align':
+            self.device.align = True
+        else:
+            self.device.align = False
+        return ""  # OK
+    
+    @conditional_reply("connected")
     def sset_dwell(self, dwell):
         # Either e.g. 100 (time in ms) or eg 100% (percent of default value)
         dwellmode = dwell[len(dwell)-1]=='%'
@@ -423,6 +434,16 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def pset_points(self, points):
         self.device.points = points
+        return ""  # OK
+
+    @conditional_reply("connected")
+    def pget_masstable(self):
+        return self.device.masstable
+        return ""  # OK
+
+    @conditional_reply("connected")
+    def pset_masstable(self, masstable):
+        self.device.masstable = masstable
         return ""  # OK
 
     @conditional_reply("connected")
