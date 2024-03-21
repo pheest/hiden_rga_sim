@@ -35,7 +35,9 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("get_name").escape("pget name").build(),
         CmdBuilder("get_name").escape("pget ID").build(),
         CmdBuilder("get_name").escape("pget ID ").build(),
+        CmdBuilder("get_release").escape("pget release").build(),
         CmdBuilder("get_release").escape("pget release ").build(),
+        CmdBuilder("get_net_address").escape("pget net-address").build(),
         CmdBuilder("get_configurationid").escape("pid# configuration ").build(),
         CmdBuilder("get_configurationid").escape("pget configuration ").build(),
         CmdBuilder("sdel_all").escape("sdel all").build(),
@@ -112,6 +114,11 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def get_release(self):
         return self.device.release
+
+    @conditional_reply("connected")
+    def get_net_address(self):
+        # This is the MAC address of the MSIU
+        return "2,48,41,0,84,62"
 
     @conditional_reply("connected")
     def get_configurationid(self):
