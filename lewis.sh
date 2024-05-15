@@ -1,11 +1,15 @@
 #!/bin/bash
 
 killall lewis 2>/dev/null
-CurrentDir=$(dirname "$0") 
-export PYTHONPATH=$CurrentDir
-logdir='/var/log/hidenPyIoc/'
-if [[ ! -w $logdir ]]; then
-    logdir=''
-fi
-lewis -k hidenrga interfaces -r localhost:10000 -p "stream: {bind_address: localhost, port: 5025}" > "$logdir"lewis_emulator.log 2>&1
 
+declare -i Instances
+Instances=${1:-1}
+
+CurrentDir=$(dirname "$0")
+
+for ((Instance=1; Instance < $Instances; Instance++))
+do
+    $CurrentDir/lewislog.sh $Instance &
+done
+
+$CurrentDir/lewislog.sh $Instances
