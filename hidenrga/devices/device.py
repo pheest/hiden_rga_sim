@@ -500,12 +500,14 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def scan_input(self):
         if self.current_scan is None:
-            return "Faraday"
-        return self._current_scan.scan_input
-
+            self.current_scan = 'Ascans'
+        return self.current_scan.scan_input
+    
     @scan_input.setter
-    def scan_input(self, input):
-        self._current_scan.scan_input = input
+    def scan_input(self, scan_input):
+        if self.current_scan is None:
+            self.current_scan = 'Ascans'
+        self._current_scan.scan_input = scan_input
 
     @property
     def min_mass(self):
@@ -520,6 +522,49 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def max_mass(self):
         return self._max_mass
+
+    @property
+    def min_current(self):
+        if self.scan_input == "Faraday":
+            return -14
+        else:
+            return -17
+    
+    @property
+    def max_current(self):
+        if self.scan_input == "Faraday":
+            return -9
+        else:
+            return -12
+    
+
+    @property
+    def min_low(self):
+        if self.scan_input == "Faraday":
+            return -14
+        else:
+            return -17
+
+    @property
+    def max_low(self):
+        if self.scan_input == "Faraday":
+            return -14
+        else:
+            return -17
+
+    @property
+    def min_high(self):
+        if self.scan_input == "Faraday":
+            return -14
+        else:
+            return -17
+
+    @property
+    def max_high(self):
+        if self.scan_input == "Faraday":
+            return -14
+        else:
+            return -17
 
     @property
     def scan_stop(self):

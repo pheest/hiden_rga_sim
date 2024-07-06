@@ -95,7 +95,8 @@ class HidenRGAStreamInterface(StreamInterface):
         CmdBuilder("lid_hash").escape("lid# ").string().build(),
         CmdBuilder("lid_dollar").escape("lid$ ").string().build(),
         CmdBuilder("ltyp").escape("ltyp ").string().build(),
-        CmdBuilder("smax_interval").escape("smax interval ").build(),
+        CmdBuilder("smax").escape("smax ").string().build(),
+        CmdBuilder("smin").escape("smin ").string().build(),
         CmdBuilder("lunt").escape("lunt ").string().build(),
         CmdBuilder("luse").escape("luse ").int().build(),
         CmdBuilder("lval").escape("lval ").int().build(),
@@ -118,7 +119,7 @@ class HidenRGAStreamInterface(StreamInterface):
     @conditional_reply("connected")
     def get_net_address(self):
         # This is the MAC address of the MSIU
-        return "2,48,41,0,84,62"
+        return "0,1,C0,16,A6,44"
 
     @conditional_reply("connected")
     def get_configurationid(self):
@@ -220,8 +221,8 @@ class HidenRGAStreamInterface(StreamInterface):
         return "task 1, job 1," # Task <task#>, job <job#>,
 
     @conditional_reply("connected")
-    def lini_scan(self, scan):
-        self._device.current_scan = scan
+    def lini_scan(self, current_scan):
+        self._device.current_scan = current_scan
         return ""  # OK
 
     @conditional_reply("connected")
@@ -337,8 +338,8 @@ class HidenRGAStreamInterface(StreamInterface):
         return ""  # OK
         
     @conditional_reply("connected")
-    def sset_input(self, input):
-        self.device.scan_input = input
+    def sset_input(self, scan_input):
+        self.device.scan_input = scan_input
         return ""  # OK
         
     @conditional_reply("connected")
@@ -411,8 +412,25 @@ class HidenRGAStreamInterface(StreamInterface):
         self.device.settlemode = settlemode
         return ""  # OK
         
-    def smax_interval(self):
-        return 86400.000
+    def smax(self, prop):
+        if prop == 'interval':
+            return 86400.000
+        if prop == 'current':
+            return self.device.max_current
+        if prop == 'low':
+            return self.device.max_low
+        if prop == 'high':
+            return self.device.max_high
+    
+    def smin(self, prop):
+        if prop == 'interval':
+            return 0.01
+        if prop == 'current':
+            return self.device.min_current
+        if prop == 'low':
+            return self.device.min_low
+        if prop == 'high':
+            return self.device.min_high
     
     @conditional_reply("connected")
     def sset_mode(self, mode):
@@ -635,6 +653,5 @@ class HidenRGAStreamInterface(StreamInterface):
     @has_log
     def handle_error(self, request, error):
         err = "An error occurred at request {}: {}".format(str(request), str(error))
-        print(err)
         self.log.error(err)
         return str(err)
