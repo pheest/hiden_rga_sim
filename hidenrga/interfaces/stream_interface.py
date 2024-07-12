@@ -452,6 +452,8 @@ class HidenRGAStreamInterface(StreamInterface):
             return ""  # OK
         elif on_off_all=='off':
             return ""  # OK
+        elif on_off_all=='stop':
+            return ""  # OK
         elif on_off_all=='all':
             return self.device.data(True)
         return self.device.data(False)
