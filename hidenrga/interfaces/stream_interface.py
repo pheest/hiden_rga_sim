@@ -509,7 +509,9 @@ class HidenRGAStreamInterface(StreamInterface):
         if logical_device == "mass":
             return self.device.min_mass
         if logical_device == "Faraday_range":
-            return 1E-11
+            return 1E-14
+        if logical_device == "SEM_range":
+            return 1E-17
         return 0
     
     @conditional_reply("connected")
@@ -520,11 +522,11 @@ class HidenRGAStreamInterface(StreamInterface):
         if logical_device == "mass":
             return self.device.max_mass
         if logical_device == "Faraday_range":
-            return 1E-5
+            return 1E-9
         if logical_device == "emission":
             return 5000
-        if logical_device == "Faraday_range":
-            return 1E-5
+        if logical_device == "SEM_range":
+            return 1E-12
         return 0
     
     @conditional_reply("connected")
