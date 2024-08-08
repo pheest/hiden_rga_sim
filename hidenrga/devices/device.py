@@ -893,20 +893,21 @@ class SimulatedHidenRGA(StateMachineDevice):
             signal = self._gasses.signal(self.mass, self.electron_energy)
             # NB, The Hiden device uses Torr as the output unit.
             # But this project uses Pascal (the SI unit) as the unit wherever possible.
+            signal *= self.emission / 500  # Default 500 uA emission
             if self.range_units == 'Torr':
                 signal *= pascal_to_torr
             if self.range_units == 'Amps':
-                signal *= pascal_to_amps * self.emission / 500
+                signal *= pascal_to_amps
             noise = normal(-self._noise, self._noise)
-            if self.range_units != 'Amps':
-                noise = noise / pascal_to_amps
             if self.current_scan.scan_input == "SEM":
-                # Lower noise in SEM mode.
+                # Much lower noise in SEM mode.
                 noise /= 1000
             if self.dwell != 0:
+                # Default 100 mS dwell time
                 noise = noise * 100 / self.dwell
 
         if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
+            # Is multi-variant scan.
             other_scan = self._scans[self.current_scan.scan_input]
             if other_scan.scan_output == "electron-energy":
                 signal = self.electron_energy
@@ -968,6 +969,7 @@ class SimulatedHidenRGA(StateMachineDevice):
                 self.log.warning("Scan aborted by IOC")
                 return False
             if self.current_scan.scan_input[1:len(self.current_scan.scan_input)] == "scans":
+                # Is multi-variant scan.
                 present_scan = self._current_scan  # Cache current scan reference
                 self._current_scan = self._scans[self.current_scan.scan_input]
                 self.scan(start_time)  # Recursive!
