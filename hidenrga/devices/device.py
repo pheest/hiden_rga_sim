@@ -535,7 +535,7 @@ class SimulatedHidenRGA(StateMachineDevice):
         if self.scan_input == "Faraday":
             return -9
         else:
-            return -12
+            return -11
     
 
     @property
@@ -617,11 +617,35 @@ class SimulatedHidenRGA(StateMachineDevice):
     @property
     def range_units(self):
         return self._range_units
-        
+
     @range_units.setter
     def range_units(self, range_units):
         self._range_units = range_units
 
+    def range_min(self, logical_device):
+        if logical_device == "Faraday_range":
+            if not self._terse:
+                return 'x10E-14' + self._range_units
+            else:
+                return -14
+        if logical_device == "SEM_range":
+            if not self._terse:
+                return 'x1E-17' + self._range_units
+            else:
+                return -17
+        
+    def range_max(self, logical_device):
+        if logical_device == "Faraday_range":
+            if not self._terse:
+                return 'x1E-9' + self._range_units
+            else:
+                return -9
+        if logical_device == "SEM_range":
+            if not self._terse:
+                return 'x1E-11' + self._range_units
+            else:
+                return -11
+        
     @property
     def zero(self):
         return self._zero
