@@ -1,6 +1,9 @@
 import numpy as np
 import pprint
 
+import logging
+logging.basicConfig(level=logging.INFO, filename='gasses.log', format='%(asctime)s [%(levelname)5s] %(name)s: %(message)s', filemode="w")
+LOG = logging.getLogger(__name__)
 
 class GasSpecies:
 
@@ -48,7 +51,9 @@ class GasSpecies:
             return 0
         sigma = 0.25  # Clear between peaks to ~12%
         gaussian = np.exp(-np.power((mass - self._mass)/sigma, 2.)/2.)
-        return self._partial_pressure * self.ionisation_efficiency(electron_energy) * gaussian
+        
+        signal = self._partial_pressure * self.ionisation_efficiency(electron_energy) * gaussian
+        return signal
 
 
 class Gasses:
@@ -62,8 +67,8 @@ class Gasses:
         self.insert(4, GasSpecies("He", 24.58738))
         self.insert(14, GasSpecies("N", 14.53414))
         self.insert(16, GasSpecies("O", 13.61806))
-        self.insert(18, GasSpecies("A", 15.75962))
         self.insert(19, GasSpecies("F", 17.42282))
+        self.insert(40, GasSpecies("A", 15.75962))
 
         self.insert(2, GasSpecies("H2", 15.425927)) # https://webbook.nist.gov/cgi/cbook.cgi?ID=C1333740&Mask=20
         self.insert(4, GasSpecies("D2", 15.46658))  # https://webbook.nist.gov/cgi/cbook.cgi?ID=C7782390&Mask=20
@@ -99,8 +104,9 @@ class Gasses:
 
     def signal(self, mass, electron_energy):
         total_signal = 0
-        index_left = np.searchsorted(self._masses, mass-0.75, side='left')
-        index_right = np.searchsorted(self._masses, mass+0.75, side='right')
+        width = 0.75
+        index_left = np.searchsorted(self._masses, mass-width, side='left')
+        index_right = np.searchsorted(self._masses, mass+width, side='right')
         # [1, 2, 4, 4, 14, 16, 18, 18, 19, 28, 28, 32, 38, 44]
         if index_right >= len(self._masses_map):
             index_right = len(self._masses_map)-1
@@ -108,8 +114,11 @@ class Gasses:
         index = index_left
         while index <= index_right:
             species_name = self._masses_map[index]
-            signal_value = self._species[species_name].signal(mass, electron_energy)
-            total_signal += signal_value
+            species = self._species[species_name]
+            if abs(species.mass-mass) < width and species.partial_pressure != 0:
+                signal_value = species.signal(mass, electron_energy)
+                LOG.debug("Species " + species.name + " species mass " + str(species.mass) + " mass " + str(mass) + " electron energy " + str(electron_energy) + " signal " + str(signal_value))
+                total_signal += signal_value
             index += 1
         return total_signal
 
@@ -127,16 +136,31 @@ if __name__ == "__main__":
         print(name, species.mass, species.ionisation_energy, species.ionisation_efficiency(70))
     pprint.pprint(gasses.masses)
 
-    D2 = gasses.gas("D2")
-    D2.partial_pressure = 1E-6  # NB, Pascal units
+    H2 = gasses.gas("H2")
+    H2.partial_pressure = 1E-5  # NB, Pascal units
 
     He = gasses.gas("He")
-    He.partial_pressure = 2E-6  # NB, Pascal units
+    He.partial_pressure = 1E-5  # NB, Pascal units
+
+    D2 = gasses.gas("D2")
+    D2.partial_pressure = 1E-5  # NB, Pascal units
 
     H2O = gasses.gas("H2O")
-    H2O.partial_pressure = 3E-6  # NB, Pascal units
+    H2O.partial_pressure = 2E-5  # NB, Pascal units
+    
+    CO = gasses.gas("CO")
+    CO.partial_pressure = 1E-6  # NB, Pascal units
 
-    for mass in np.arange(17.0, 19.0, 0.1):
+    CO2 = gasses.gas("CO2")
+    CO.partial_pressure = 2E-6  # NB, Pascal units
+
+    N2 = gasses.gas("N2")
+    N2.partial_pressure = 8E-5  # NB, Pascal units
+
+    O2 = gasses.gas("O2")
+    O2.partial_pressure = 2E-5  # NB, Pascal units
+
+    for mass in np.arange(17.25, 18.76, 0.01):
         print("mass " + str(mass) + " signal " + str(gasses.signal(mass, 70)))
 
     for ee in range(15, 40):
