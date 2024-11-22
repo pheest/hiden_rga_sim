@@ -16,5 +16,6 @@ if %Instance% EQU %Instances% goto end
 start /B %CurrentDir%lewislog.bat %Instance% %LewisPath%
 goto start
 :end
-%CurrentDir%lewislog.bat %Instance% %LewisPath%
+%CurrentDir%lewislog.bat %Instance% %LewisPath% & call;
+exit /b 0
 
