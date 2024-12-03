@@ -12,6 +12,9 @@ logdir='/var/log/hidenPyIoc/'
 if [[ ! -w $logdir ]]; then
     # Can't write to global log dir. Running in test/lewis_emulators.
     logdir = '../../main/epics/var/log/'
+    if [[ ! -w $logdir ]]; then
+        logdir = $RUNNER_TEMP
+    fi
 fi
 
 lewis -k hidenrga interfaces -r localhost:$RPC_PORT -p "stream: {bind_address: localhost, port: $DEVICE_PORT}" > "$logdir"lewis_emulator$Instance.log 2>&1
