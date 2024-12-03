@@ -350,6 +350,9 @@ class HidenRGAStreamInterface(StreamInterface):
             return self.device.high
         if name == 'current':
             return self.device.current
+        if name == 'row':
+            # NB, Hiden indexes rows starting at 1. I prefer to index from 0.
+            return self.device.current_row + 1
         return ""  # OK
         
     @conditional_reply("connected")

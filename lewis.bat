@@ -16,6 +16,6 @@ if %Instance% EQU %Instances% goto end
 start /B %CurrentDir%lewislog.bat %Instance% %LewisPath%
 goto start
 :end
-%CurrentDir%lewislog.bat %Instance% %LewisPath% & call;
-exit /b 0
-
+REM See https://superuser.com/questions/1705792/how-to-suppress-windows-batch-job-termination-confirmation
+echo N | cmd /C %CurrentDir%lewislog.bat %Instance% %LewisPath%
+if %errorlevel% equ 130 time /t
