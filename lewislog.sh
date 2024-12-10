@@ -16,4 +16,4 @@ if [ ! -d $LogDir ] || [ ! -w $LogDir ]; then
     LogDir=$(dirname $(dirname $CurrentDir))'/main/epics/var/log/'
 fi
 
-lewis -k hidenrga interfaces -r localhost:$RPC_PORT -p "stream: {bind_address: localhost, port: $DEVICE_PORT}" > "$logdir"lewis_emulator$Instance.log 2>&1
+lewis -k hidenrga interfaces -r localhost:$RPC_PORT -p "stream: {bind_address: localhost, port: $DEVICE_PORT}" > "$LogDir"lewis_emulator$Instance.log 2>&1
